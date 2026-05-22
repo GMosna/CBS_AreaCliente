@@ -1,0 +1,183 @@
+// ============================================================
+// SASSI IMÓVEIS — Prisma Schema
+// PostgreSQL via Supabase
+//
+// Variáveis de ambiente (.env):
+//   DATABASE_URL  → connection string com pooler (transação) — para Prisma Client
+//   DIRECT_URL    → connection string direta sem pooler — para migrações
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================================
+// MODEL: Inquilino
+// ============================================================
+model Inquilino {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cpf              String    @unique @db.VarChar(64)   // HMAC-SHA256 hex do CPF
+  nome             String    @db.VarChar(255)
+  email            String?   @db.VarChar(255)
+  dataNascimento   DateTime  @map("data_nascimento")   @db.Date
+  imovelReferencia String?   @map("imovel_referencia") @db.VarChar(255)
+  ativo            Boolean   @default(true)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
+  notificacoes  Notificacao[]
+
+  @@index([cpf])
+  @@index([ativo])
+  @@map("inquilinos")
+}
+
+// ============================================================
+// MODEL: RefreshToken
+// ============================================================
+model RefreshToken {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  inquilinoId  String    @map("inquilino_id") @db.Uuid
+  tokenHash    String    @unique @map("token_hash") @db.VarChar(64)
+  expiresAt    DateTime  @map("expires_at")   @db.Timestamptz(6)
+  revogado     Boolean   @default(false)
+  ipAddress    String?   @map("ip_address")   @db.Inet
+  userAgent    String?   @map("user_agent")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  inquilino Inquilino @relation(fields: [inquilinoId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
+  @@index([expiresAt])
+  @@index([inquilinoId])
+  @@map("refresh_tokens")
+}
+
+// ============================================================
+// MODEL: Parceiro
+// ============================================================
+model Parceiro {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cnpj               String    @unique @db.VarChar(18)
+  nomeEmpresa        String    @map("nome_empresa")        @db.VarChar(255)
+  segmento           String?   @db.VarChar(100)
+  responsavel        String?   @db.VarChar(255)
+  whatsapp           String?   @db.VarChar(20)
+  email              String?   @db.VarChar(255)
+  endereco           String?
+  descontoDescricao  String    @map("desconto_descricao")
+  frequenciaDesconto String?   @map("frequencia_desconto") @db.VarChar(100)
+  logoUrl            String?   @map("logo_url")
+  ativo              Boolean   @default(true)
+  aprovado           Boolean   @default(false)
+  destaque           Boolean   @default(false)
+  origem             String    @default("sheets") @db.VarChar(50)
+  sheetsRowId        String?   @map("sheets_row_id") @db.VarChar(100)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([segmento, aprovado, ativo])
+  @@index([destaque])
+  @@map("parceiros")
+}
+
+// ============================================================
+// MODEL: AuditLog
+// ============================================================
+model AuditLog {
+  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  inquilinoId  String?    @map("inquilino_id") @db.Uuid
+  ipAddress    String     @map("ip_address")   @db.Inet
+  userAgent    String?    @map("user_agent")
+  acao         AuditAcao
+  metadata     Json?      @db.JsonB
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  inquilino Inquilino? @relation(fields: [inquilinoId], references: [id], onDelete: SetNull)
+
+  @@index([inquilinoId, createdAt])
+  @@index([ipAddress,   createdAt])
+  @@map("audit_logs")
+}
+
+// ============================================================
+// MODEL: LoginAttempt
+// ============================================================
+model LoginAttempt {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ipAddress    String    @map("ip_address")   @db.Inet
+  cpfHash      String?   @map("cpf_hash")     @db.VarChar(64)
+  sucesso      Boolean
+  bloqueadoAte DateTime? @map("bloqueado_ate") @db.Timestamptz(6)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([ipAddress, createdAt])
+  @@map("login_attempts")
+}
+
+// ============================================================
+// MODEL: Notificacao
+// ============================================================
+model Notificacao {
+  id           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  inquilinoId  String?          @map("inquilino_id") @db.Uuid
+  titulo       String           @db.VarChar(255)
+  mensagem     String
+  tipo         NotificacaoTipo?
+  lida         Boolean          @default(false)
+  criadaEm     DateTime         @default(now()) @map("criada_em") @db.Timestamptz(6)
+
+  inquilino Inquilino? @relation(fields: [inquilinoId], references: [id], onDelete: Cascade)
+
+  @@index([inquilinoId, lida, criadaEm])
+  @@map("notificacoes")
+}
+
+// ============================================================
+// MODEL: SyncLog — histórico de sincronizações com Google Sheets
+// ============================================================
+model SyncLog {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  totalLinhas   Int      @map("total_linhas")
+  inseridos     Int
+  atualizados   Int
+  erros         Int
+  errosDetalhes Json?    @map("erros_detalhes") @db.JsonB
+  duracaoMs     Int      @map("duracao_ms")
+  status        String   @db.VarChar(20) // 'success' | 'partial' | 'error'
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([createdAt])
+  @@map("sync_logs")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+enum AuditAcao {
+  login_success
+  login_fail
+  login_bloqueado
+  logout
+  token_refresh
+  visualizou_parceiro
+  copiou_desconto
+
+  @@map("audit_acao")
+}
+
+enum NotificacaoTipo {
+  info
+  aviso
+  urgente
+
+  @@map("notificacao_tipo")
+}
