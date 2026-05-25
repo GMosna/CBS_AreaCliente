@@ -109,6 +109,20 @@ function validarCNPJ(raw: string): boolean {
   return parseInt(digits[12]) === d1 && parseInt(digits[13]) === d2;
 }
 
+// Converte timestamp do Google Forms (DD/MM/YYYY HH:MM:SS ou ISO) para ISO string
+function parsarTimestamp(raw: string): string | null {
+  if (!raw) return null;
+  // Formato brasileiro: "23/05/2026 09:24:32" ou "23/05/2026, 09:24:32"
+  const br = raw.replace(',', '').match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})$/);
+  if (br) {
+    const [, d, m, y, h, min, s] = br;
+    return new Date(`${y}-${m}-${d}T${h}:${min}:${s}-03:00`).toISOString();
+  }
+  // Tenta parse direto (ISO ou outro formato reconhecido)
+  const dt = new Date(raw);
+  return isNaN(dt.getTime()) ? null : dt.toISOString();
+}
+
 function formatarCNPJ(raw: string): string {
   const d = raw.replace(/\D/g, '');
   return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12, 14)}`;
@@ -186,6 +200,26 @@ const rowSchema = z.object({
     .string()
     .optional()
     .transform((s) => s?.trim() || undefined),
+
+  percentualDesconto: z
+    .string()
+    .optional()
+    .transform((s) => s?.trim() || undefined),
+
+  siteInstagram: z
+    .string()
+    .optional()
+    .transform((s) => s?.trim() || undefined),
+
+  logoUrl: z
+    .string()
+    .optional()
+    .transform((s) => s?.trim() || undefined),
+
+  mensagem: z
+    .string()
+    .optional()
+    .transform((s) => s?.trim() || undefined),
 });
 
 // ============================================================
@@ -239,8 +273,8 @@ export class SheetsSyncService {
 
     const token = await this.authenticate();
 
-    // Range A:J = 10 colunas do formulário
-    const range = encodeURIComponent('A:J');
+    // Lê especificamente da aba "Inscrições", colunas A até O (15 colunas)
+    const range = encodeURIComponent('Inscrições!A:O');
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetsId}/values/${range}`;
 
     const response = await fetch(url, {
@@ -261,17 +295,22 @@ export class SheetsSyncService {
     const dataRows = allRows.slice(1, MAX_ROWS + 1);
 
     return dataRows.map((cells, index): RawSheetRow => ({
-      nomeEmpresa:       (cells[0] ?? '').trim(),
-      segmento:          (cells[1] ?? '').trim(),
-      cnpj:              (cells[2] ?? '').trim(),
-      responsavel:       (cells[3] ?? '').trim(),
-      whatsapp:          (cells[4] ?? '').trim(),
-      email:             (cells[5] ?? '').trim(),
-      endereco:          (cells[6] ?? '').trim(),
-      descontoDescricao: (cells[7] ?? '').trim(),
-      frequenciaDesconto:(cells[8] ?? '').trim(),
-      timestamp:         (cells[9] ?? '').trim(),
-      rowIndex:          index + 2, // +2: linha 1 é header, index é 0-based
+      nomeEmpresa:        (cells[0]  ?? '').trim(),
+      segmento:           (cells[1]  ?? '').trim(),
+      cnpj:               (cells[2]  ?? '').trim(),
+      responsavel:        (cells[3]  ?? '').trim(),
+      whatsapp:           (cells[4]  ?? '').trim(),
+      email:              (cells[5]  ?? '').trim(),
+      endereco:           (cells[6]  ?? '').trim(),
+      descontoDescricao:  (cells[7]  ?? '').trim(),
+      frequenciaDesconto: (cells[8]  ?? '').trim(),
+      percentualDesconto: (cells[9]  ?? '').trim(),
+      siteInstagram:      (cells[10] ?? '').trim(),
+      comoConheceu:       (cells[11] ?? '').trim(),
+      logoUrl:            (cells[12] ?? '').trim(),
+      mensagem:           (cells[13] ?? '').trim(),
+      timestamp:          (cells[14] ?? '').trim(),
+      rowIndex:           index + 2,
     }));
   }
 
@@ -281,14 +320,18 @@ export class SheetsSyncService {
   validateRow(row: RawSheetRow): ValidationResult {
     const result = rowSchema.safeParse({
       nomeEmpresa:        row.nomeEmpresa,
-      segmento:           row.segmento || undefined,
+      segmento:           row.segmento           || undefined,
       cnpj:               row.cnpj,
-      responsavel:        row.responsavel || undefined,
-      whatsapp:           row.whatsapp || undefined,
-      email:              row.email || undefined,
-      endereco:           row.endereco || undefined,
+      responsavel:        row.responsavel         || undefined,
+      whatsapp:           row.whatsapp            || undefined,
+      email:              row.email               || undefined,
+      endereco:           row.endereco            || undefined,
       descontoDescricao:  row.descontoDescricao,
-      frequenciaDesconto: row.frequenciaDesconto || undefined,
+      frequenciaDesconto: row.frequenciaDesconto  || undefined,
+      percentualDesconto: row.percentualDesconto  || undefined,
+      siteInstagram:      row.siteInstagram       || undefined,
+      logoUrl:            row.logoUrl             || undefined,
+      mensagem:           row.mensagem            || undefined,
     });
 
     if (!result.success) {
@@ -361,13 +404,18 @@ export class SheetsSyncService {
             .from('parceiros')
             .update({
               nome_empresa:        input.nomeEmpresa,
-              segmento:            input.segmento ?? null,
-              responsavel:         input.responsavel ?? null,
-              whatsapp:            input.whatsapp ?? null,
-              email:               input.email ?? null,
-              endereco:            input.endereco ?? null,
+              segmento:            input.segmento            ?? null,
+              responsavel:         input.responsavel          ?? null,
+              whatsapp:            input.whatsapp             ?? null,
+              email:               input.email                ?? null,
+              endereco:            input.endereco             ?? null,
               desconto_descricao:  input.descontoDescricao,
-              frequencia_desconto: input.frequenciaDesconto ?? null,
+              frequencia_desconto: input.frequenciaDesconto   ?? null,
+              percentual_desconto: input.percentualDesconto   ?? null,
+              site_instagram:      input.siteInstagram        ?? null,
+              logo_url:            input.logoUrl              ?? null,
+              mensagem:            input.mensagem             ?? null,
+              data_cadastro:       parsarTimestamp(row.timestamp),
               sheets_row_id:       String(row.rowIndex),
             })
             .eq('id', existing.id);
@@ -381,13 +429,18 @@ export class SheetsSyncService {
             .insert({
               nome_empresa:        input.nomeEmpresa,
               cnpj:                input.cnpj,
-              segmento:            input.segmento ?? null,
-              responsavel:         input.responsavel ?? null,
-              whatsapp:            input.whatsapp ?? null,
-              email:               input.email ?? null,
-              endereco:            input.endereco ?? null,
+              segmento:            input.segmento            ?? null,
+              responsavel:         input.responsavel          ?? null,
+              whatsapp:            input.whatsapp             ?? null,
+              email:               input.email                ?? null,
+              endereco:            input.endereco             ?? null,
               desconto_descricao:  input.descontoDescricao,
-              frequencia_desconto: input.frequenciaDesconto ?? null,
+              frequencia_desconto: input.frequenciaDesconto   ?? null,
+              percentual_desconto: input.percentualDesconto   ?? null,
+              site_instagram:      input.siteInstagram        ?? null,
+              logo_url:            input.logoUrl              ?? null,
+              mensagem:            input.mensagem             ?? null,
+              data_cadastro:       parsarTimestamp(row.timestamp),
               sheets_row_id:       String(row.rowIndex),
               origem:              'sheets',
               aprovado:            false,

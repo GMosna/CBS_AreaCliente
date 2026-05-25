@@ -23,13 +23,15 @@ const SECURITY_HEADERS: Record<string, string> = {
 
 // ----------------------------------------------------------
 // Rotas públicas — nunca exigem autenticação
+// '/' usa apenas igualdade exata; os outros usam startsWith
+// (evita o bug onde pathname.startsWith('/') é sempre true)
 // ----------------------------------------------------------
-const ROTAS_PUBLICAS = ['/', '/login', '/api/auth/'];
-
 function isRotaPublica(pathname: string): boolean {
-  return ROTAS_PUBLICAS.some(
-    (rota) => pathname === rota || pathname.startsWith(rota)
-  );
+  if (pathname === '/') return true;
+  return pathname === '/login' ||
+         pathname.startsWith('/login/') ||
+         pathname.startsWith('/api/auth/') ||
+         pathname.startsWith('/api/admin/');  // autenticação própria via x-admin-token
 }
 
 // ----------------------------------------------------------
@@ -73,8 +75,16 @@ async function tentarRefreshSilencioso(
 
     if (!refreshResponse.ok) return null;
 
+    const data = await refreshResponse.json() as { ok: boolean; inquilinoId: string };
+    if (!data.inquilinoId) return null;
+
+    // Injeta x-inquilino-id no request para que o route handler receba a identidade
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('x-inquilino-id', data.inquilinoId);
+    requestHeaders.set('x-inquilino-role', 'inquilino');
+
     // Propaga os novos cookies (access_token + refresh_token) para o browser
-    const response = NextResponse.next({ request: { headers: request.headers } });
+    const response = NextResponse.next({ request: { headers: requestHeaders } });
     refreshResponse.headers.getSetCookie().forEach((cookie) => {
       response.headers.append('Set-Cookie', cookie);
     });

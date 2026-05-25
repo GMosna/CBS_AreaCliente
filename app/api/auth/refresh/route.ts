@@ -114,8 +114,11 @@ export async function POST(request: NextRequest) {
 
   // ----------------------------------------------------------
   // 9. Resposta com novos cookies
+  // inquilinoId é incluído no body para que o middleware possa
+  // injetar x-inquilino-id no request após o refresh silencioso.
+  // O browser nunca vê este body diretamente — o middleware o consome.
   // ----------------------------------------------------------
-  const response = NextResponse.json({ ok: true }, { status: 200 });
+  const response = NextResponse.json({ ok: true, inquilinoId: inquilino.id }, { status: 200 });
   setAuthCookies(response, novoAccessToken, novoRefreshToken);
 
   return response;

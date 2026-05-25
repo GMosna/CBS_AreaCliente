@@ -75,7 +75,11 @@ model Parceiro {
   endereco           String?
   descontoDescricao  String    @map("desconto_descricao")
   frequenciaDesconto String?   @map("frequencia_desconto") @db.VarChar(100)
+  percentualDesconto String?   @map("percentual_desconto") @db.VarChar(100)
+  siteInstagram      String?   @map("site_instagram")      @db.VarChar(255)
   logoUrl            String?   @map("logo_url")
+  mensagem           String?
+  dataCadastro       DateTime? @map("data_cadastro") @db.Timestamptz(6)
   ativo              Boolean   @default(true)
   aprovado           Boolean   @default(false)
   destaque           Boolean   @default(false)

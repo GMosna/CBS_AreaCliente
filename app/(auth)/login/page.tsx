@@ -2,25 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-
-// ── Logo mark ─────────────────────────────────────────────────
-function SassiLogoMark({ size = 64 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" aria-label="Sassi Imóveis">
-      <rect width="64" height="64" rx="12" fill="#e43333" />
-      <text
-        x="32" y="47"
-        fontFamily="'Bebas Neue', sans-serif"
-        fontSize="40"
-        fill="white"
-        textAnchor="middle"
-        letterSpacing="2"
-      >
-        S
-      </text>
-    </svg>
-  );
-}
+import Image from 'next/image';
 
 // ── Ícones inline ─────────────────────────────────────────────
 const LockIcon = () => (
@@ -151,7 +133,14 @@ export default function LoginPage() {
           style={{ animationDelay: '0ms', animationFillMode: 'forwards' }}
         >
           <div className="flex justify-center mb-5">
-            <SassiLogoMark />
+            <Image
+              src="/SASSI_S_Logo_S.png"
+              alt="Sassi Imóveis"
+              width={72}
+              height={72}
+              priority
+              className="drop-shadow-[0_0_16px_rgba(228,51,51,0.35)]"
+            />
           </div>
           <h1 className="font-display text-5xl tracking-[5px] text-white leading-none">
             SASSI <span className="text-[#e43333]">IMÓVEIS</span>

@@ -27,12 +27,6 @@ export function PartnerCard({ parceiro, mode = 'grid' }: PartnerCardProps) {
         ].join(' ')}
         aria-label={`Ver benefício: ${parceiro.nome_empresa}`}
       >
-        {parceiro.destaque && (
-          <span className="absolute top-3 right-3 bg-[#e43333]/15 border border-[#e43333]/30 text-[#e43333] text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full">
-            Destaque
-          </span>
-        )}
-
         {/* Logo / Inicial */}
         <div className="flex items-start gap-4 mb-4">
           <div className="shrink-0 w-12 h-12 rounded-xl overflow-hidden">
@@ -54,9 +48,16 @@ export function PartnerCard({ parceiro, mode = 'grid' }: PartnerCardProps) {
           </div>
 
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-white text-sm leading-snug truncate pr-6">
-              {parceiro.nome_empresa}
-            </h3>
+            <div className="flex items-center gap-2 mb-0.5">
+              <h3 className="font-semibold text-white text-sm leading-snug truncate">
+                {parceiro.nome_empresa}
+              </h3>
+              {parceiro.destaque && (
+                <span className="shrink-0 bg-[#e43333]/15 border border-[#e43333]/30 text-[#e43333] text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full">
+                  Destaque
+                </span>
+              )}
+            </div>
             {parceiro.segmento && (
               <span className="inline-block mt-1 text-[10px] font-medium uppercase tracking-wide text-[#9ca3af] bg-[#222] border border-[#2a2a2a] px-2 py-0.5 rounded-full">
                 {parceiro.segmento}

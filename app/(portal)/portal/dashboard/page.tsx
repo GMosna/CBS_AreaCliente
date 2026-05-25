@@ -2,6 +2,7 @@ import { headers } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
 import { PartnerCard } from '@/components/portal/PartnerCard';
+import { contarInquilinosAtivos } from '@/lib/erp-db';
 import type { ParceiroListItem } from '@/types/parceiro';
 
 function getSupabase() {
@@ -17,7 +18,7 @@ export default async function DashboardPage() {
 
   const supabase = getSupabase();
 
-  const [inquilinoRes, parceirosRes] = await Promise.all([
+  const [inquilinoRes, parceirosRes, totalClientes] = await Promise.all([
     supabase
       .from('inquilinos')
       .select('nome, imovel_referencia')
@@ -30,6 +31,7 @@ export default async function DashboardPage() {
       .eq('aprovado', true)
       .order('destaque', { ascending: false })
       .order('nome_empresa'),
+    contarInquilinosAtivos(),
   ]);
 
   const inquilino  = inquilinoRes.data;
@@ -50,7 +52,7 @@ export default async function DashboardPage() {
     { valor: totalParceiros, desc: 'empresas ativas',  label: 'Parceiros' },
     { valor: novosEsteMes,   desc: 'este mês',          label: 'Novos'     },
     { valor: segmentos,      desc: 'categorias',         label: 'Segmentos' },
-    { valor: totalParceiros, desc: 'exclusivos',         label: 'Descontos' },
+    { valor: totalClientes,   desc: 'clientes ativos',    label: 'Inquilinos' },
   ];
 
   const primeiroNome = inquilino?.nome?.split(' ')[0] ?? 'Inquilino';

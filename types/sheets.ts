@@ -27,21 +27,30 @@ export type RawSheetRow = {
   endereco: string;
   descontoDescricao: string;
   frequenciaDesconto: string;
+  percentualDesconto: string;
+  siteInstagram: string;
+  comoConheceu: string;
+  logoUrl: string;
+  mensagem: string;
   timestamp: string;
-  rowIndex: number; // número da linha na planilha (1-based, excluindo header)
+  rowIndex: number;
 };
 
 /** Dados validados e prontos para inserção no banco */
 export type ParceiroInput = {
   nomeEmpresa: string;
   segmento?: string;
-  cnpj: string;             // formatado: XX.XXX.XXX/XXXX-XX
+  cnpj: string;
   responsavel?: string;
-  whatsapp?: string;        // normalizado: apenas dígitos DDD+número
+  whatsapp?: string;
   email?: string;
   endereco?: string;
   descontoDescricao: string;
   frequenciaDesconto?: string;
+  percentualDesconto?: string;
+  siteInstagram?: string;
+  logoUrl?: string;
+  mensagem?: string;
 };
 
 /** Resultado da validação de uma linha */

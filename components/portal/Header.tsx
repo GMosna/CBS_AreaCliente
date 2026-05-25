@@ -2,18 +2,10 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotificacoes } from '@/hooks/useNotificacoes';
-
-function SassiLogoMark({ size = 32 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" aria-hidden>
-      <rect width="64" height="64" rx="10" fill="#e43333" />
-      <text x="32" y="47" fontFamily="'Bebas Neue', sans-serif" fontSize="40" fill="white" textAnchor="middle" letterSpacing="2">S</text>
-    </svg>
-  );
-}
 
 export function Header() {
   const { inquilino, logout }           = useAuth();
@@ -41,7 +33,13 @@ export function Header() {
 
       {/* Logo */}
       <Link href="/portal/dashboard" className="flex items-center gap-3 shrink-0">
-        <SassiLogoMark />
+        <Image
+          src="/SASSI_S_Logo_S.png"
+          alt="Sassi Imóveis"
+          width={32}
+          height={32}
+          className="shrink-0"
+        />
         <span className="font-display text-lg tracking-[3px] text-white hidden sm:block">
           SASSI <span className="text-[#e43333]">IMÓVEIS</span>
         </span>

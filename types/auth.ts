@@ -3,6 +3,7 @@
 // ============================================================
 
 /** Dados que ficam dentro do JWT (access token) */
+
 export type TokenPayload = {
   id: string;          // UUID do inquilino
   role: 'inquilino';   // sempre 'inquilino' por enquanto

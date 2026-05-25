@@ -6,7 +6,7 @@
 // Node.js. O jose funciona em ambos os ambientes.
 // ============================================================
 
-import { jwtVerify } from 'jose';
+import { jwtVerify } from 'jose/jwt/verify';
 import type { TokenPayload } from '@/types/auth';
 
 function getJwtSecret(): Uint8Array {

@@ -52,6 +52,17 @@ export type ErpInquilino = {
 // Retorna os dados do inquilino ou null se não encontrado.
 // Lança 'ERP_UNAVAILABLE' se o banco estiver inacessível.
 // ----------------------------------------------------------
+export async function contarInquilinosAtivos(): Promise<number> {
+  try {
+    const [rows] = await getPool().execute<mysql.RowDataPacket[]>(
+      `SELECT COUNT(*) AS total FROM inqu WHERE data_desativado IS NULL`
+    );
+    return Number(rows[0]?.total ?? 0);
+  } catch {
+    return 0;
+  }
+}
+
 export async function buscarInquilinoERP(
   cpf: string,           // 11 dígitos, sem formatação
   dataNascimento: string // YYYY-MM-DD

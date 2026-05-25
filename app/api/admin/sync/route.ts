@@ -10,6 +10,7 @@
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { timingSafeEqual } from 'crypto';
 import { SheetsSyncService } from '@/lib/sheets-sync';
 
 function isAutorizado(request: NextRequest): boolean {
@@ -32,7 +33,7 @@ function isAutorizado(request: NextRequest): boolean {
   const given    = Buffer.from(provided);
   if (expected.length !== given.length) return false;
 
-  return require('crypto').timingSafeEqual(expected, given);
+  return timingSafeEqual(expected, given);
 }
 
 export async function POST(request: NextRequest) {
