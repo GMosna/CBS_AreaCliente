@@ -73,24 +73,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { cpf, dataNascimento } = parsed.data;
-
-  // ── LOG TEMPORÁRIO DE DIAGNÓSTICO — REMOVER APÓS RESOLVER ─────
-  {
-    const rawCpf = (body as Record<string, unknown>).cpf;
-    const rawLen = typeof rawCpf === 'string' ? rawCpf.length : -1;
-    const rawHasNonDigit = typeof rawCpf === 'string' && /\D/.test(rawCpf);
-    const secretRaw = process.env.CPF_SECRET_KEY ?? '';
-    const secretTrimmed = secretRaw.trim();
-    console.log('[DEBUG-LOGIN] CPF raw length:', rawLen, '| tem não-dígito:', rawHasNonDigit);
-    console.log('[DEBUG-LOGIN] CPF sanitizado length:', cpf.length, '| primeiros 3:', cpf.substring(0, 3));
-    console.log('[DEBUG-LOGIN] Data recebida:', dataNascimento);
-    console.log('[DEBUG-LOGIN] CPF_SECRET_KEY length raw:', secretRaw.length, '| trimmed:', secretTrimmed.length);
-    console.log('[DEBUG-LOGIN] CPF_SECRET_KEY primeiros 4 chars (hex):', Buffer.from(secretTrimmed.substring(0, 4)).toString('hex'));
-  }
-  // ── FIM LOG TEMPORÁRIO ─────────────────────────────────────────
-
   const cpfHash = hashCPF(cpf);
-  console.log('[DEBUG-LOGIN] Hash gerado (primeiros 8):', cpfHash.substring(0, 8) + '...');
 
   // ----------------------------------------------------------
   // 2. Rate limit — bloqueia antes de qualquer consulta ao banco
