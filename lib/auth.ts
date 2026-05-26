@@ -23,8 +23,13 @@ import type { TokenPayload } from '@/types/auth';
 
 /** Gera HMAC-SHA256 do CPF. Sempre produz o mesmo resultado para o mesmo CPF+chave. */
 export function hashCPF(cpf: string): string {
+  // .trim() remove espaços/newlines que o Vercel às vezes insere no valor da env var.
+  // replace() troca aspas tipográficas por aspas normais (copiar/colar de documentos).
+  const secret = (process.env.CPF_SECRET_KEY ?? '')
+    .trim()
+    .replace(/[‘’“”]/g, "'");
   return crypto
-    .createHmac('sha256', process.env.CPF_SECRET_KEY!)
+    .createHmac('sha256', secret)
     .update(cpf)
     .digest('hex');
 }
