@@ -2,7 +2,6 @@ import { headers } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
 import { PartnerCard } from '@/components/portal/PartnerCard';
-import { contarInquilinosAtivos } from '@/lib/erp-db';
 import type { ParceiroListItem } from '@/types/parceiro';
 
 function getSupabase() {
@@ -18,7 +17,7 @@ export default async function DashboardPage() {
 
   const supabase = getSupabase();
 
-  const [inquilinoRes, parceirosRes, totalClientes] = await Promise.all([
+  const [inquilinoRes, parceirosRes, inquilinosCountRes] = await Promise.all([
     supabase
       .from('inquilinos')
       .select('nome, imovel_referencia')
@@ -31,11 +30,15 @@ export default async function DashboardPage() {
       .eq('aprovado', true)
       .order('destaque', { ascending: false })
       .order('nome_empresa'),
-    contarInquilinosAtivos(),
+    supabase
+      .from('inquilinos')
+      .select('*', { count: 'exact', head: true })
+      .eq('ativo', true),
   ]);
 
-  const inquilino  = inquilinoRes.data;
-  const parceiros  = (parceirosRes.data ?? []) as ParceiroListItem[];
+  const inquilino    = inquilinoRes.data;
+  const parceiros    = (parceirosRes.data ?? []) as ParceiroListItem[];
+  const totalClientes = inquilinosCountRes.count ?? 0;
 
   const agora     = new Date();
   const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);

@@ -2,10 +2,12 @@
 // SASSI IMÓVEIS — POST /api/auth/login
 //
 // Fluxo:
-//  1. Valida CPF + data de nascimento no ERP (MySQL)
-//  2. Verifica: inquilino ativo, data_desativado IS NULL
-//  3. Auto-provisiona ou atualiza no Supabase local
-//  4. Emite access_token (JWT 15min) + refresh_token (7 dias)
+//  1. Valida CPF + data de nascimento no Supabase
+//  2. Verifica: inquilino ativo (ativo = true)
+//  3. Emite access_token (JWT 15min) + refresh_token (7 dias)
+//
+// ⚠️  Nunca conecta ao ERP/MySQL diretamente.
+//     Os dados já estão sincronizados no Supabase via N8N.
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -18,7 +20,6 @@ import {
   hashToken,
   setAuthCookies,
 } from '@/lib/auth';
-import { buscarInquilinoERP } from '@/lib/erp-db';
 import { checkRateLimit, recordAttempt } from '@/lib/rate-limit';
 import { logAudit } from '@/lib/audit';
 
@@ -87,28 +88,23 @@ export async function POST(request: NextRequest) {
   }
 
   // ----------------------------------------------------------
-  // 3. Validar no ERP (MySQL)
-  //    Confirma: CPF existe, data de nascimento correta,
-  //    data_desativado IS NULL (inquilino ainda ativo)
+  // 3. Buscar inquilino no Supabase
+  //    Valida: CPF (hash) + data de nascimento + conta ativa
   // ----------------------------------------------------------
-  let erpInquilino;
-  try {
-    erpInquilino = await buscarInquilinoERP(cpf, dataNascimento);
-  } catch (err) {
-    // ERP inacessível — não é culpa do usuário, retorna 503
-    if (err instanceof Error && err.message === 'ERP_UNAVAILABLE') {
-      return NextResponse.json(
-        { error: 'Sistema temporariamente indisponível. Tente novamente em instantes.' },
-        { status: 503 }
-      );
-    }
-    return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
-  }
+  const supabase = getSupabase();
+
+  const { data: inquilino } = await supabase
+    .from('inquilinos')
+    .select('id, nome, email, imovel_referencia')
+    .eq('cpf', cpfHash)
+    .eq('data_nascimento', dataNascimento)
+    .eq('ativo', true)
+    .single();
 
   // ----------------------------------------------------------
   // 4. Registrar tentativa (sucesso ou falha)
   // ----------------------------------------------------------
-  if (!erpInquilino) {
+  if (!inquilino) {
     await recordAttempt(ip, cpfHash, false);
     await logAudit('login_fail', request);
     return NextResponse.json(ERRO_AUTH, { status: 401 });
@@ -117,66 +113,15 @@ export async function POST(request: NextRequest) {
   await recordAttempt(ip, cpfHash, true);
 
   // ----------------------------------------------------------
-  // 5. Auto-provisionar no Supabase local
-  //    Primeiro login → INSERT
-  //    Logins seguintes → UPDATE nome/email/endereço do ERP
-  //    O CPF é armazenado como HMAC-SHA256 (jamais em plain text)
+  // 5. Gerar tokens
   // ----------------------------------------------------------
-  const supabase = getSupabase();
-
-  const { data: existente } = await supabase
-    .from('inquilinos')
-    .select('id')
-    .eq('cpf', cpfHash)
-    .single();
-
-  let inquilinoId: string;
-
-  if (existente) {
-    // Atualiza dados vindos do ERP (nome pode mudar, endereço idem)
-    await supabase
-      .from('inquilinos')
-      .update({
-        nome:              erpInquilino.nome,
-        email:             erpInquilino.email,
-        imovel_referencia: erpInquilino.imovel_endereco,
-      })
-      .eq('id', existente.id);
-
-    inquilinoId = existente.id;
-  } else {
-    // Primeiro acesso — cria o registro local
-    const { data: novo, error: insertErr } = await supabase
-      .from('inquilinos')
-      .insert({
-        cpf:               cpfHash,
-        nome:              erpInquilino.nome,
-        email:             erpInquilino.email,
-        imovel_referencia: erpInquilino.imovel_endereco,
-        data_nascimento:   dataNascimento,
-        ativo:             true,
-      })
-      .select('id')
-      .single();
-
-    if (insertErr || !novo) {
-      console.error('[login] Erro ao provisionar inquilino:', insertErr?.message);
-      return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
-    }
-
-    inquilinoId = novo.id;
-  }
-
-  // ----------------------------------------------------------
-  // 6. Gerar tokens
-  // ----------------------------------------------------------
-  const accessToken      = await generateAccessToken({ id: inquilinoId, role: 'inquilino' });
+  const accessToken      = await generateAccessToken({ id: inquilino.id, role: 'inquilino' });
   const refreshToken     = generateRefreshToken();
   const refreshTokenHash = hashToken(refreshToken);
   const expiresAt        = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
   const { error: tokenErr } = await supabase.from('refresh_tokens').insert({
-    inquilino_id: inquilinoId,
+    inquilino_id: inquilino.id,
     token_hash:   refreshTokenHash,
     expires_at:   expiresAt.toISOString(),
     ip_address:   ip,
@@ -189,12 +134,12 @@ export async function POST(request: NextRequest) {
   }
 
   // ----------------------------------------------------------
-  // 7. Auditoria + resposta
+  // 6. Auditoria + resposta
   // ----------------------------------------------------------
-  await logAudit('login_success', request, inquilinoId);
+  await logAudit('login_success', request, inquilino.id);
 
   const response = NextResponse.json(
-    { nome: erpInquilino.nome } satisfies { nome: string },
+    { nome: inquilino.nome } satisfies { nome: string },
     { status: 200 }
   );
 
