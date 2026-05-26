@@ -1,18 +1,21 @@
 import type { Metadata } from 'next';
-import { Bebas_Neue, DM_Sans } from 'next/font/google';
+import localFont from 'next/font/local';
 import './globals.css';
 
-// Bebas Neue: fonte display — títulos, logo, números grandes
-const bebasNeue = Bebas_Neue({
+const bebasNeue = localFont({
+  src: './fonts/bebas-neue-latin.woff2',
   weight: '400',
-  subsets: ['latin'],
   variable: '--font-bebas',
   display: 'swap',
 });
 
-// DM Sans: fonte corpo — parágrafos, labels, botões
-const dmSans = DM_Sans({
-  subsets: ['latin'],
+const dmSans = localFont({
+  src: [
+    { path: './fonts/dm-sans-latin.woff2',              weight: '100 1000', style: 'normal' },
+    { path: './fonts/dm-sans-latin-ext.woff2',          weight: '100 1000', style: 'normal' },
+    { path: './fonts/dm-sans-italic-latin.woff2',       weight: '100 1000', style: 'italic' },
+    { path: './fonts/dm-sans-italic-latin-ext.woff2',   weight: '100 1000', style: 'italic' },
+  ],
   variable: '--font-dm',
   display: 'swap',
 });
