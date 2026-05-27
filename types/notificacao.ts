@@ -1,9 +1,10 @@
-export type TipoNotificacao = 'info' | 'aviso' | 'urgente';
+export type TipoNotificacao = 'info' | 'aviso' | 'urgente' | 'novo_parceiro';
 
 export const TIPO_NOTIFICACAO_LABELS: Record<TipoNotificacao, string> = {
-  info:    'Informação',
-  aviso:   'Aviso',
-  urgente: 'Urgente',
+  info:          'Informação',
+  aviso:         'Aviso',
+  urgente:       'Urgente',
+  novo_parceiro: 'Novo Parceiro',
 };
 
 export type Notificacao = {

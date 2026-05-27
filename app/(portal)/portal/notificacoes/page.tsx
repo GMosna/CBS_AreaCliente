@@ -4,15 +4,17 @@ import { useState, useEffect } from 'react';
 import type { Notificacao, TipoNotificacao } from '@/types/notificacao';
 
 const TIPO_BADGE: Record<TipoNotificacao, string> = {
-  info:    'bg-[#3b82f6]/10 border-[#3b82f6]/30 text-[#3b82f6]',
-  aviso:   'bg-[#f59e0b]/10 border-[#f59e0b]/30 text-[#f59e0b]',
-  urgente: 'bg-[#e43333]/10 border-[#e43333]/30 text-[#e43333]',
+  info:          'bg-[#3b82f6]/10 border-[#3b82f6]/30 text-[#3b82f6]',
+  aviso:         'bg-[#f59e0b]/10 border-[#f59e0b]/30 text-[#f59e0b]',
+  urgente:       'bg-[#e43333]/10 border-[#e43333]/30 text-[#e43333]',
+  novo_parceiro: 'bg-[#22c55e]/10 border-[#22c55e]/30 text-[#22c55e]',
 };
 
 const TIPO_LABELS: Record<TipoNotificacao, string> = {
-  info:    'Info',
-  aviso:   'Aviso',
-  urgente: 'Urgente',
+  info:          'Info',
+  aviso:         'Aviso',
+  urgente:       'Urgente',
+  novo_parceiro: 'Novo Parceiro',
 };
 
 function formatarData(iso: string) {
@@ -43,6 +45,13 @@ export default function NotificacoesPage() {
   const [notificacoes, setNotificacoes] = useState<Notificacao[]>([]);
   const [loading, setLoading]           = useState(true);
 
+  const [emailNotif,  setEmailNotif]  = useState(false);
+  const [email,       setEmail]       = useState('');
+  const [prefLoading, setPrefLoading] = useState(true);
+  const [prefSaving,  setPrefSaving]  = useState(false);
+  const [prefMsg,     setPrefMsg]     = useState('');
+  const [prefOk,      setPrefOk]      = useState(false);
+
   useEffect(() => {
     fetch('/api/portal/notificacoes')
       .then((r) => r.json())
@@ -50,6 +59,44 @@ export default function NotificacoesPage() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    fetch('/api/portal/preferencias')
+      .then((r) => r.json())
+      .then((d) => {
+        setEmailNotif(d.email_notificacoes ?? false);
+        setEmail(d.email ?? '');
+      })
+      .catch(() => {})
+      .finally(() => setPrefLoading(false));
+  }, []);
+
+  async function salvarPreferencias() {
+    setPrefSaving(true);
+    setPrefMsg('');
+    setPrefOk(false);
+    const body: Record<string, unknown> = { email_notificacoes: emailNotif };
+    if (emailNotif) body.email = email;
+    try {
+      const res = await fetch('/api/portal/preferencias', {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({})) as { error?: string };
+      if (res.ok) {
+        setPrefMsg('Preferências salvas.');
+        setPrefOk(true);
+      } else {
+        setPrefMsg(data.error ?? 'Erro ao salvar preferências.');
+      }
+    } catch {
+      setPrefMsg('Erro de conexão.');
+    } finally {
+      setPrefSaving(false);
+      setTimeout(() => setPrefMsg(''), 4000);
+    }
+  }
 
   const naoLidas = notificacoes.filter((n) => !n.lida).length;
 
@@ -155,6 +202,89 @@ export default function NotificacoesPage() {
           ))}
         </div>
       )}
+
+      {/* Preferências de e-mail */}
+      <section>
+        <h2 className="font-display text-2xl tracking-wider text-white mb-4">
+          PREFERÊNCIAS
+        </h2>
+        <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl p-6 space-y-5">
+          {prefLoading ? (
+            <div className="h-5 w-48 bg-[#222] rounded animate-pulse" />
+          ) : (
+            <>
+              {/* Toggle */}
+              <label className="flex items-start gap-3 cursor-pointer select-none">
+                <div className="relative mt-0.5 shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={emailNotif}
+                    onChange={(e) => setEmailNotif(e.target.checked)}
+                    className="sr-only"
+                  />
+                  <div
+                    className={[
+                      'w-10 h-5 rounded-full transition-colors duration-200',
+                      emailNotif ? 'bg-[#e43333]' : 'bg-[#2a2a2a]',
+                    ].join(' ')}
+                  />
+                  <div
+                    className={[
+                      'absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200',
+                      emailNotif ? 'translate-x-5' : 'translate-x-0.5',
+                    ].join(' ')}
+                  />
+                </div>
+                <div>
+                  <p className="text-white text-sm font-medium">Receber novos parceiros por e-mail</p>
+                  <p className="text-[#6b7280] text-xs mt-0.5">
+                    Seja notificado quando um novo parceiro entrar para o Clube.
+                  </p>
+                </div>
+              </label>
+
+              {/* Campo de e-mail — visível apenas quando ativo */}
+              {emailNotif && (
+                <div className="space-y-2">
+                  <label htmlFor="pref-email" className="block text-xs text-[#9ca3af]">
+                    Seu e-mail
+                  </label>
+                  <input
+                    id="pref-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="seu@email.com"
+                    className="w-full bg-[#222] border border-[#2a2a2a] rounded-lg px-4 py-3 text-white placeholder-[#6b7280] text-sm outline-none focus:border-[#e43333] transition-colors"
+                  />
+                </div>
+              )}
+
+              {/* Botão salvar */}
+              <button
+                onClick={salvarPreferencias}
+                disabled={prefSaving || (emailNotif && !email.trim())}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-[#e43333] hover:bg-[#981c1c] text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {prefSaving ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Salvando...
+                  </>
+                ) : 'Salvar preferências'}
+              </button>
+
+              {/* Feedback */}
+              {prefMsg && (
+                <p className={`text-xs ${prefOk ? 'text-[#22c55e]' : 'text-[#e43333]'}`}>
+                  {prefMsg}
+                </p>
+              )}
+            </>
+          )}
+        </div>
+      </section>
+
     </div>
   );
 }

@@ -26,7 +26,8 @@ export type AuditAcao =
   | 'logout'
   | 'token_refresh'
   | 'visualizou_parceiro'
-  | 'copiou_desconto';
+  | 'copiou_desconto'
+  | 'preferencia_atualizada';
 
 /** Body esperado na requisição POST /api/auth/login */
 export type LoginRequest = {

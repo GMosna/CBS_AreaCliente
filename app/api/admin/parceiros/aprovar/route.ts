@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
+import { criarNotificacaoGlobal } from '@/lib/notificacoes';
 
 function validarToken(cnpj: string, token: string): boolean {
   const secret = process.env.APPROVAL_SECRET;
@@ -86,7 +87,7 @@ export async function GET(request: NextRequest) {
     .from('parceiros')
     .update({ aprovado: true })
     .eq('cnpj', cnpj)
-    .select('nome_empresa, aprovado')
+    .select('id, nome_empresa, aprovado, segmento, desconto_descricao')
     .maybeSingle();
 
   if (error) {
@@ -104,6 +105,18 @@ export async function GET(request: NextRequest) {
       false
     );
   }
+
+  // Notificar inquilinos (fire and forget — nunca bloqueia a resposta)
+  criarNotificacaoGlobal({
+    titulo:       `Novo parceiro: ${parceiro.nome_empresa}`,
+    mensagem:     `${parceiro.nome_empresa} acabou de entrar para o Clube de Benefícios Sassi. Confira o desconto exclusivo para inquilinos!`,
+    tipo:         'novo_parceiro',
+    nomeParceiro: parceiro.nome_empresa,
+    segmento:     parceiro.segmento,
+    desconto:     parceiro.desconto_descricao,
+  }).catch((err) => {
+    console.error('[aprovar] Falha ao criar notificações:', err);
+  });
 
   return htmlResposta(
     'Parceiro aprovado!',
