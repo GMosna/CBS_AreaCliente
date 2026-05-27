@@ -20,7 +20,7 @@ import {
   hashToken,
   setAuthCookies,
 } from '@/lib/auth';
-import { checkRateLimit, recordAttempt } from '@/lib/rate-limit';
+import { checkRateLimit, recordAttempt, contarFalhasIP, verificarAlertaSeguranca, CAPTCHA_THRESHOLD } from '@/lib/rate-limit';
 import { logAudit } from '@/lib/audit';
 
 // ============================================================
@@ -34,9 +34,34 @@ const loginSchema = z.object({
   dataNascimento: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'Data deve estar no formato YYYY-MM-DD'),
+  captchaToken: z.string().optional(),
 });
 
 const ERRO_AUTH = { error: 'CPF ou data de nascimento inválidos' } as const;
+
+// ============================================================
+// Verificação do CAPTCHA Cloudflare Turnstile
+// Retorna true se válido, false se inválido.
+// Se TURNSTILE_SECRET_KEY não está configurada (desenvolvimento),
+// retorna true para não bloquear o fluxo local.
+// ============================================================
+async function verificarCaptcha(token: string): Promise<boolean> {
+  const secret = process.env.TURNSTILE_SECRET_KEY;
+  if (!secret) return true; // dev sem configuração: não bloquear
+
+  try {
+    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ secret, response: token }),
+      signal: AbortSignal.timeout(5_000),
+    });
+    const data = (await res.json()) as { success: boolean };
+    return data.success === true;
+  } catch {
+    return false; // fail closed: erro na verificação = rejeitar
+  }
+}
 
 function getSupabase() {
   return createClient(
@@ -72,7 +97,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
 
-  const { cpf, dataNascimento } = parsed.data;
+  const { cpf, dataNascimento, captchaToken } = parsed.data;
   const cpfHash = hashCPF(cpf);
 
   // ----------------------------------------------------------
@@ -85,6 +110,28 @@ export async function POST(request: NextRequest) {
       { error: 'Muitas tentativas. Tente novamente mais tarde.', blockedUntil: blockedUntil?.toISOString() },
       { status: 429 }
     );
+  }
+
+  // ----------------------------------------------------------
+  // 2b. CAPTCHA — exigido após CAPTCHA_THRESHOLD falhas no IP
+  //     Verifica com Cloudflare Turnstile antes de tocar no banco
+  // ----------------------------------------------------------
+  const falhasAntes = await contarFalhasIP(ip);
+  if (falhasAntes >= CAPTCHA_THRESHOLD) {
+    if (!captchaToken) {
+      return NextResponse.json(
+        { error: ERRO_AUTH.error, requiresCaptcha: true },
+        { status: 401 }
+      );
+    }
+    const captchaValido = await verificarCaptcha(captchaToken);
+    if (!captchaValido) {
+      await logAudit('login_fail', request);
+      return NextResponse.json(
+        { error: ERRO_AUTH.error, requiresCaptcha: true },
+        { status: 401 }
+      );
+    }
   }
 
   // ----------------------------------------------------------
@@ -107,6 +154,8 @@ export async function POST(request: NextRequest) {
   if (!inquilino) {
     await recordAttempt(ip, cpfHash, false);
     await logAudit('login_fail', request);
+    // Dispara alerta em background — nunca bloqueia a resposta
+    verificarAlertaSeguranca(ip).catch(() => {});
     return NextResponse.json(ERRO_AUTH, { status: 401 });
   }
 

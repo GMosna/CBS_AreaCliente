@@ -12,9 +12,12 @@
 import { createClient } from '@supabase/supabase-js';
 import type { RateLimitResult } from '@/types/auth';
 
-const MAX_TENTATIVAS  = 5;
-const JANELA_MINUTOS  = 10;
+const MAX_TENTATIVAS   = 5;
+const JANELA_MINUTOS   = 10;
 const BLOQUEIO_MINUTOS = 30;
+
+export const CAPTCHA_THRESHOLD = 3;   // falhas antes de exigir CAPTCHA
+const ALERT_THRESHOLD          = 50;  // falhas/hora antes de disparar webhook
 
 /** Client com service_role para acessar tabelas protegidas pelo RLS */
 function getSupabase() {
@@ -22,6 +25,59 @@ function getSupabase() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
+}
+
+/**
+ * Conta falhas de login de um IP na janela atual (10 min).
+ * Usado para decidir se o CAPTCHA deve ser exigido antes de processar a tentativa.
+ */
+export async function contarFalhasIP(ip: string): Promise<number> {
+  const supabase = getSupabase();
+  const desde = new Date(Date.now() - JANELA_MINUTOS * 60 * 1000).toISOString();
+
+  const { count } = await supabase
+    .from('login_attempts')
+    .select('*', { count: 'exact', head: true })
+    .eq('ip_address', ip)
+    .eq('sucesso', false)
+    .gte('created_at', desde);
+
+  return count ?? 0;
+}
+
+/**
+ * Verifica se o IP disparou o limiar de alerta (50 falhas/hora).
+ * Se sim, chama o webhook configurado em SECURITY_ALERT_WEBHOOK_URL.
+ * Falha silenciosamente — nunca bloqueia o fluxo de autenticação.
+ */
+export async function verificarAlertaSeguranca(ip: string): Promise<void> {
+  const webhookUrl = process.env.SECURITY_ALERT_WEBHOOK_URL;
+  if (!webhookUrl) return;
+
+  try {
+    const supabase = getSupabase();
+    const umaHoraAtras = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+
+    const { count: falhasHora } = await supabase
+      .from('login_attempts')
+      .select('*', { count: 'exact', head: true })
+      .eq('ip_address', ip)
+      .eq('sucesso', false)
+      .gte('created_at', umaHoraAtras);
+
+    if ((falhasHora ?? 0) < ALERT_THRESHOLD) return;
+
+    await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: `🚨 *Alerta de Segurança — Sassi Área Cliente*\n\nIP \`${ip}\` acumulou *${falhasHora} tentativas de login falhadas* na última hora.\n\nVerifique o painel de auditoria no Supabase.`,
+      }),
+      signal: AbortSignal.timeout(5_000),
+    });
+  } catch {
+    // Falha silenciosa — não bloquear o fluxo de autenticação
+  }
 }
 
 /**

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
@@ -37,17 +37,27 @@ function formatCPF(value: string): string {
   return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
 }
 
+// Chave de teste do Cloudflare para desenvolvimento (sempre passa)
+const DEV_SITEKEY = '1x00000000000000000000AA';
+const SITEKEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? DEV_SITEKEY;
+
 // ── Página ─────────────────────────────────────────────────────
 export default function LoginPage() {
   const router = useRouter();
 
-  const [cpf, setCpf]                     = useState('');
-  const [dataNascimento, setData]         = useState('');
-  const [loading, setLoading]             = useState(false);
-  const [error, setError]                 = useState('');
-  const [failedAttempts, setFailed]       = useState(0);
-  const [blockedUntil, setBlockedUntil]   = useState<Date | null>(null);
-  const [countdown, setCountdown]         = useState('');
+  const [cpf, setCpf]                   = useState('');
+  const [dataNascimento, setData]       = useState('');
+  const [loading, setLoading]           = useState(false);
+  const [error, setError]               = useState('');
+  const [failedAttempts, setFailed]     = useState(0);
+  const [blockedUntil, setBlockedUntil] = useState<Date | null>(null);
+  const [countdown, setCountdown]       = useState('');
+  const [captchaRequired, setCaptchaRequired] = useState(false);
+  const [captchaToken, setCaptchaToken]       = useState<string | null>(null);
+
+  const widgetIdRef   = useRef<string | null>(null);
+  const captchaRef    = useRef<HTMLDivElement>(null);
+  const scriptLoadedRef = useRef(false);
 
   // ── Contador de bloqueio ──────────────────────────────────────
   useEffect(() => {
@@ -64,6 +74,53 @@ export default function LoginPage() {
     return () => clearInterval(id);
   }, [blockedUntil]);
 
+  // ── Carrega e renderiza Turnstile quando exigido ──────────────
+  useEffect(() => {
+    if (!captchaRequired) return;
+
+    function renderWidget() {
+      if (!captchaRef.current || !window.turnstile) return;
+
+      // Remove widget anterior se existir
+      if (widgetIdRef.current) {
+        window.turnstile.remove(widgetIdRef.current);
+        widgetIdRef.current = null;
+      }
+
+      widgetIdRef.current = window.turnstile.render(captchaRef.current, {
+        sitekey: SITEKEY,
+        theme: 'dark',
+        callback: (token) => setCaptchaToken(token),
+        'expired-callback': () => setCaptchaToken(null),
+        'error-callback': () => setCaptchaToken(null),
+      });
+    }
+
+    if (window.turnstile) {
+      renderWidget();
+      return;
+    }
+
+    if (scriptLoadedRef.current) return; // script já em carregamento
+    scriptLoadedRef.current = true;
+
+    const script = document.createElement('script');
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+    script.async = true;
+    script.defer = true;
+    script.onload = renderWidget;
+    document.body.appendChild(script);
+  }, [captchaRequired]);
+
+  // Reseta o widget após cada falha (token de uso único)
+  useEffect(() => {
+    if (!captchaRequired || !widgetIdRef.current) return;
+    if (window.turnstile) {
+      window.turnstile.reset(widgetIdRef.current);
+      setCaptchaToken(null);
+    }
+  }, [failedAttempts, captchaRequired]);
+
   // ── Submit ────────────────────────────────────────────────────
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -73,10 +130,16 @@ export default function LoginPage() {
     setError('');
 
     try {
+      const body: Record<string, string> = {
+        cpf: cpf.replace(/\D/g, ''),
+        dataNascimento,
+      };
+      if (captchaToken) body.captchaToken = captchaToken;
+
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cpf: cpf.replace(/\D/g, ''), dataNascimento }),
+        body: JSON.stringify(body),
       });
 
       if (res.ok) {
@@ -84,13 +147,18 @@ export default function LoginPage() {
         return;
       }
 
-      const data = await res.json().catch(() => ({})) as { error?: string; blockedUntil?: string };
+      const data = await res.json().catch(() => ({})) as {
+        error?: string;
+        blockedUntil?: string;
+        requiresCaptcha?: boolean;
+      };
 
       if (res.status === 429 && data.blockedUntil) {
         setBlockedUntil(new Date(data.blockedUntil));
         setError('Muitas tentativas incorretas.');
       } else {
         setError(data.error ?? 'CPF ou data de nascimento inválidos.');
+        if (data.requiresCaptcha) setCaptchaRequired(true);
       }
       setFailed((n) => n + 1);
     } catch {
@@ -102,6 +170,7 @@ export default function LoginPage() {
 
   const cpfValido       = cpf.replace(/\D/g, '').length === 11;
   const formPreenchido  = cpfValido && dataNascimento.length === 10;
+  const captchaOk       = !captchaRequired || !!captchaToken;
   const hoje            = new Date().toISOString().split('T')[0];
 
   return (
@@ -208,6 +277,16 @@ export default function LoginPage() {
                 />
               </div>
 
+              {/* CAPTCHA Turnstile — aparece após 3 falhas */}
+              {captchaRequired && (
+                <div className="space-y-2">
+                  <p className="text-xs text-[#9ca3af]">
+                    Confirme que você não é um robô para continuar.
+                  </p>
+                  <div ref={captchaRef} />
+                </div>
+              )}
+
               {/* Erro */}
               {error && (
                 <div
@@ -240,7 +319,7 @@ export default function LoginPage() {
               {/* Botão */}
               <button
                 type="submit"
-                disabled={loading || !!blockedUntil || !formPreenchido}
+                disabled={loading || !!blockedUntil || !formPreenchido || !captchaOk}
                 className={[
                   'w-full py-3.5 rounded-lg font-semibold text-base text-white',
                   'flex items-center justify-center gap-2.5',

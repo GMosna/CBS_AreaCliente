@@ -11,7 +11,8 @@ import type { NextConfig } from 'next';
 const CSP = [
   "default-src 'self'",
   // Next.js (App Router) requer 'unsafe-inline' para scripts de hidratação
-  "script-src 'self' 'unsafe-inline'",
+  // Cloudflare Turnstile carrega script de challenges.cloudflare.com
+  "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
   // Tailwind gera classes inline; sem fontes externas (fontes são locais)
   "style-src 'self' 'unsafe-inline'",
   // Fontes servidas localmente em /app/fonts/
@@ -19,8 +20,11 @@ const CSP = [
   // Logos de parceiros podem vir de domínios externos (campo logo_url)
   "img-src 'self' data: blob: https:",
   // Supabase: HTTPS para REST/Auth, WSS para Realtime
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
-  // Bloqueia embedding em frames — defense-in-depth além do X-Frame-Options
+  // Turnstile: verifica tokens em challenges.cloudflare.com
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com",
+  // Turnstile renderiza em um iframe de challenges.cloudflare.com
+  "frame-src 'self' https://challenges.cloudflare.com",
+  // Bloqueia embedding em frames externos — defense-in-depth além do X-Frame-Options
   "frame-ancestors 'none'",
   // Previne injeção de base tags que redirecionam todos os links
   "base-uri 'self'",
