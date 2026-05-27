@@ -18,7 +18,14 @@ function isAutorizado(request: NextRequest): boolean {
   const authHeader = request.headers.get('authorization');
   if (authHeader) {
     const cronSecret = process.env.CRON_SECRET;
-    if (cronSecret && authHeader === `Bearer ${cronSecret}`) return true;
+    if (cronSecret) {
+      const expected = Buffer.from(`Bearer ${cronSecret}`);
+      const provided = Buffer.from(authHeader);
+      // timingSafeEqual evita timing attacks que revelam o secret por tempo de resposta
+      if (expected.length === provided.length && timingSafeEqual(expected, provided)) {
+        return true;
+      }
+    }
   }
 
   // Chamada manual/externa via X-Admin-Token

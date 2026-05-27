@@ -13,18 +13,19 @@ function getSupabase() {
 }
 
 interface Props {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function ParceiroDetalhePage({ params }: Props) {
-  const inquilinoId = headers().get('x-inquilino-id');
+  const { id } = await params;
+  const inquilinoId = (await headers()).get('x-inquilino-id');
   if (!inquilinoId) return null;
 
   const supabase = getSupabase();
   const { data } = await supabase
     .from('parceiros')
     .select('id, nome_empresa, segmento, desconto_descricao, frequencia_desconto, logo_url, destaque, whatsapp, endereco, created_at')
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('ativo', true)
     .eq('aprovado', true)
     .single();

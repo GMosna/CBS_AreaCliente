@@ -9,7 +9,7 @@ function getSupabase() {
 }
 
 interface RouteParams {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
@@ -18,11 +18,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   }
 
+  const { id } = await params;
   const supabase = getSupabase();
   const { error } = await supabase
     .from('notificacoes')
     .update({ lida: true })
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('inquilino_id', inquilinoId); // garante que só pode marcar as próprias
 
   if (error) {

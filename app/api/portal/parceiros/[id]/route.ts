@@ -10,7 +10,7 @@ function getSupabase() {
 }
 
 interface RouteParams {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
@@ -19,11 +19,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   }
 
+  const { id } = await params;
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from('parceiros')
     .select('id, nome_empresa, segmento, desconto_descricao, frequencia_desconto, logo_url, destaque, whatsapp, created_at')
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('ativo', true)
     .eq('aprovado', true)
     .single();
@@ -42,6 +43,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   }
 
-  await logAudit('visualizou_parceiro', request, inquilinoId, { parceiro_id: params.id });
+  const { id } = await params;
+  await logAudit('visualizou_parceiro', request, inquilinoId, { parceiro_id: id });
   return NextResponse.json({ ok: true });
 }

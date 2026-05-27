@@ -11,7 +11,7 @@ function getSupabase() {
 }
 
 export default async function ParceirosPage() {
-  const inquilinoId = headers().get('x-inquilino-id');
+  const inquilinoId = (await headers()).get('x-inquilino-id');
   if (!inquilinoId) return null;
 
   const supabase = getSupabase();
