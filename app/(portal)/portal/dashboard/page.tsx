@@ -55,7 +55,7 @@ export default async function DashboardPage() {
     { valor: totalClientes,   desc: 'já acessaram',        label: 'Clientes' },
   ];
 
-  const primeiroNome = inquilino?.nome?.split(' ')[0] ?? 'Inquilino';
+  const primeiroNome = inquilino?.nome?.trim().split(' ')[0]?.trim() || 'Inquilino';
 
   return (
     <div className="space-y-8">
