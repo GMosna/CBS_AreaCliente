@@ -17,7 +17,7 @@ export default async function DashboardPage() {
 
   const supabase = getSupabase();
 
-  const [inquilinoRes, parceirosRes, inquilinosCountRes] = await Promise.all([
+  const [inquilinoRes, parceirosRes, logadosRes] = await Promise.all([
     supabase
       .from('inquilinos')
       .select('nome, imovel_referencia')
@@ -30,15 +30,12 @@ export default async function DashboardPage() {
       .eq('aprovado', true)
       .order('destaque', { ascending: false })
       .order('nome_empresa'),
-    supabase
-      .from('inquilinos')
-      .select('*', { count: 'exact', head: true })
-      .eq('ativo', true),
+    supabase.rpc('contar_inquilinos_logados'),
   ]);
 
-  const inquilino    = inquilinoRes.data;
-  const parceiros    = (parceirosRes.data ?? []) as ParceiroListItem[];
-  const totalClientes = inquilinosCountRes.count ?? 0;
+  const inquilino     = inquilinoRes.data;
+  const parceiros     = (parceirosRes.data ?? []) as ParceiroListItem[];
+  const totalClientes = (logadosRes.data as number | null) ?? 0;
 
   const agora     = new Date();
   const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
@@ -55,7 +52,7 @@ export default async function DashboardPage() {
     { valor: totalParceiros, desc: 'empresas ativas',  label: 'Parceiros' },
     { valor: novosEsteMes,   desc: 'este mês',          label: 'Novos'     },
     { valor: segmentos,      desc: 'categorias',         label: 'Segmentos' },
-    { valor: totalClientes,   desc: 'clientes ativos',    label: 'Inquilinos' },
+    { valor: totalClientes,   desc: 'já acessaram',        label: 'Clientes' },
   ];
 
   const primeiroNome = inquilino?.nome?.split(' ')[0] ?? 'Inquilino';
