@@ -11,9 +11,16 @@ function extractDriveFileId(url: string): string | null {
 export function resolveLogoUrl(url: string | null | undefined): string | null {
   if (!url) return null;
 
-  if (url.includes('drive.google.com') || url.includes('googleusercontent.com/d/')) {
-    const fileId = extractDriveFileId(url) ?? url.match(/\/d\/([a-zA-Z0-9_-]+)/)?.[1];
-    if (fileId) return `https://lh3.googleusercontent.com/d/${fileId}`;
+  // Converte Google Drive para lh3 e roteia pelo proxy (lh3 retorna 429 em browsers)
+  if (url.includes('drive.google.com') || url.includes('googleusercontent.com')) {
+    const fileId =
+      extractDriveFileId(url) ??
+      url.match(/\/d\/([a-zA-Z0-9_-]+)/)?.[1];
+
+    if (fileId) {
+      const lh3 = `https://lh3.googleusercontent.com/d/${fileId}`;
+      return `/api/proxy-imagem?url=${encodeURIComponent(lh3)}`;
+    }
   }
 
   return url;
