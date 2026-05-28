@@ -26,7 +26,7 @@ export function Header() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const inicial = inquilino?.nome?.charAt(0).toUpperCase() ?? '?';
+  const inicial = inquilino?.nome?.trim().charAt(0).toUpperCase() || '?';
 
   return (
     <header className="h-16 bg-[#111] border-b border-[#2a2a2a] flex items-center px-4 md:px-6 gap-4 sticky top-0 z-40">
@@ -78,7 +78,7 @@ export function Header() {
           </div>
           {inquilino && (
             <span className="text-sm text-white font-medium hidden md:block max-w-[140px] truncate">
-              {inquilino.nome.split(' ')[0]}
+              {inquilino.nome.trim().split(' ')[0]?.trim() || 'Inquilino'}
             </span>
           )}
           <svg
