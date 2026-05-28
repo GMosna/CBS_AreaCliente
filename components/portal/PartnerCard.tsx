@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import { DiscountModal } from './DiscountModal';
 import type { ParceiroListItem } from '@/types/parceiro';
 
@@ -31,11 +30,9 @@ export function PartnerCard({ parceiro, mode = 'grid' }: PartnerCardProps) {
         <div className="flex items-start gap-4 mb-4">
           <div className="shrink-0 w-12 h-12 rounded-xl overflow-hidden">
             {parceiro.logo_url ? (
-              <Image
+              <img
                 src={parceiro.logo_url}
                 alt={parceiro.nome_empresa}
-                width={48}
-                height={48}
                 className="w-full h-full object-contain"
               />
             ) : (
