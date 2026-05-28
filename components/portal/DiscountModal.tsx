@@ -101,7 +101,7 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
                   <img
                     src={resolveLogoUrl(parceiro.logo_url)!}
                     alt={parceiro.nome_empresa}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                   />
                 ) : (
                   <span className="font-display text-3xl text-white">{inicial}</span>

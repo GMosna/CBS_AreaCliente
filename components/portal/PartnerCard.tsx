@@ -31,12 +31,12 @@ export function PartnerCard({ parceiro, mode = 'grid' }: PartnerCardProps) {
       >
         {/* Logo / Inicial */}
         <div className="flex items-start gap-4 mb-4">
-          <div className="shrink-0 w-12 h-12 rounded-xl overflow-hidden">
+          <div className="shrink-0 w-12 h-12 rounded-xl overflow-hidden bg-[#981c1c]">
             {logoSrc && !logoError ? (
               <img
                 src={logoSrc}
                 alt={parceiro.nome_empresa}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
                 onError={() => setLogoError(true)}
               />
             ) : (
