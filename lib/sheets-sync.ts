@@ -193,7 +193,7 @@ const rowSchema = z.object({
 
   descontoDescricao: z
     .string()
-    .min(10, 'Descrição do desconto deve ter mínimo 10 caracteres')
+    .min(1, 'Descrição do desconto é obrigatória')
     .transform((s) => s.trim()),
 
   frequenciaDesconto: z
