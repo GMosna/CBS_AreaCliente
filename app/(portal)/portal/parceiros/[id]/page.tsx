@@ -60,7 +60,7 @@ export default async function ParceiroDetalhePage({ params }: Props) {
               <img
                 src={resolveLogoUrl(parceiro.logo_url)!}
                 alt={parceiro.nome_empresa}
-                className="w-full h-full object-contain"
+                className="w-full h-full object-cover"
               />
             ) : (
               <span className="font-display text-4xl text-white">{inicial}</span>

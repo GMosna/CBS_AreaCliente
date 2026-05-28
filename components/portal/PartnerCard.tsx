@@ -36,7 +36,7 @@ export function PartnerCard({ parceiro, mode = 'grid' }: PartnerCardProps) {
               <img
                 src={logoSrc}
                 alt={parceiro.nome_empresa}
-                className="w-full h-full object-contain"
+                className="w-full h-full object-cover"
                 onError={() => setLogoError(true)}
               />
             ) : (
