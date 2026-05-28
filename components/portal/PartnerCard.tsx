@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { DiscountModal } from './DiscountModal';
+import { resolveLogoUrl } from '@/utils/logo';
 import type { ParceiroListItem } from '@/types/parceiro';
 
 interface PartnerCardProps {
@@ -11,8 +12,10 @@ interface PartnerCardProps {
 
 export function PartnerCard({ parceiro, mode = 'grid' }: PartnerCardProps) {
   const [modalOpen, setModalOpen] = useState(false);
+  const [logoError, setLogoError] = useState(false);
 
   const inicial = parceiro.nome_empresa.charAt(0).toUpperCase();
+  const logoSrc = resolveLogoUrl(parceiro.logo_url);
 
   return (
     <>
@@ -29,11 +32,12 @@ export function PartnerCard({ parceiro, mode = 'grid' }: PartnerCardProps) {
         {/* Logo / Inicial */}
         <div className="flex items-start gap-4 mb-4">
           <div className="shrink-0 w-12 h-12 rounded-xl overflow-hidden">
-            {parceiro.logo_url ? (
+            {logoSrc && !logoError ? (
               <img
-                src={parceiro.logo_url}
+                src={logoSrc}
                 alt={parceiro.nome_empresa}
                 className="w-full h-full object-contain"
+                onError={() => setLogoError(true)}
               />
             ) : (
               <div className="w-full h-full bg-[#981c1c] flex items-center justify-center">

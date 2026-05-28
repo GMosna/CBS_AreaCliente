@@ -11,6 +11,7 @@
 import crypto from 'crypto';
 import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
+import { resolveLogoUrl } from '@/utils/logo';
 import type {
   ServiceAccount,
   RawSheetRow,
@@ -214,7 +215,7 @@ const rowSchema = z.object({
   logoUrl: z
     .string()
     .optional()
-    .transform((s) => s?.trim() || undefined),
+    .transform((s) => resolveLogoUrl(s?.trim()) ?? undefined),
 
   mensagem: z
     .string()

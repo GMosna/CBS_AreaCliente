@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { ParceiroDb } from '@/types/parceiro';
 import { ParceiroDetalheActions } from './ParceiroDetalheActions';
+import { resolveLogoUrl } from '@/utils/logo';
 
 function getSupabase() {
   return createClient(
@@ -55,9 +56,9 @@ export default async function ParceiroDetalhePage({ params }: Props) {
         {/* Header do parceiro */}
         <div className="p-6 md:p-8 flex items-start gap-5 border-b border-[#2a2a2a]">
           <div className="w-20 h-20 rounded-2xl overflow-hidden shrink-0 bg-[#981c1c] flex items-center justify-center">
-            {parceiro.logo_url ? (
+            {resolveLogoUrl(parceiro.logo_url) ? (
               <img
-                src={parceiro.logo_url}
+                src={resolveLogoUrl(parceiro.logo_url)!}
                 alt={parceiro.nome_empresa}
                 className="w-full h-full object-contain"
               />

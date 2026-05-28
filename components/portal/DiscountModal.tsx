@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { ParceiroListItem } from '@/types/parceiro';
 import { buildWhatsAppUrl } from '@/utils/whatsapp';
+import { resolveLogoUrl } from '@/utils/logo';
 
 interface DiscountModalProps {
   parceiro: ParceiroListItem;
@@ -96,9 +97,9 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
           <div className="flex items-start justify-between gap-4 mb-6">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 bg-[#981c1c] flex items-center justify-center">
-                {parceiro.logo_url ? (
+                {resolveLogoUrl(parceiro.logo_url) ? (
                   <img
-                    src={parceiro.logo_url}
+                    src={resolveLogoUrl(parceiro.logo_url)!}
                     alt={parceiro.nome_empresa}
                     className="w-full h-full object-contain"
                   />
