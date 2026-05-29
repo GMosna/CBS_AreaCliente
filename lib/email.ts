@@ -142,13 +142,16 @@ export async function enviarEmailNovoLead({
   approvalUrl: string;
 }): Promise<void> {
   const apiKey     = process.env.RESEND_API_KEY;
-  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL;
+  const adminEmails = (process.env.ADMIN_NOTIFICATION_EMAIL ?? '')
+    .split(',')
+    .map((e) => e.trim())
+    .filter(Boolean);
 
   if (!apiKey) {
     console.warn('[email] RESEND_API_KEY não configurado — e-mail de lead não enviado');
     return;
   }
-  if (!adminEmail) {
+  if (adminEmails.length === 0) {
     console.warn('[email] ADMIN_NOTIFICATION_EMAIL não configurado — e-mail de lead não enviado');
     return;
   }
@@ -161,7 +164,7 @@ export async function enviarEmailNovoLead({
     },
     body: JSON.stringify({
       from:    FROM_EMAIL,
-      to:      [adminEmail],
+      to:      adminEmails,
       subject: `Novo Lead — Clube Sassi: ${nomeParceiro}`,
       html:    buildLeadHtml(nomeParceiro, cnpj, segmento, responsavel, whatsapp, approvalUrl),
     }),
