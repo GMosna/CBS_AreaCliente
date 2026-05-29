@@ -12,6 +12,7 @@ import crypto from 'crypto';
 import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
 import { resolveLogoUrl } from '@/utils/logo';
+import { enviarEmailNovoLead } from './email';
 import type {
   ServiceAccount,
   RawSheetRow,
@@ -450,6 +451,26 @@ export class SheetsSyncService {
 
           if (error) throw new Error(error.message);
           inseridos++;
+
+          // Notificar admin com link de aprovação (fire and forget)
+          const approvalSecret = process.env.APPROVAL_SECRET;
+          if (approvalSecret) {
+            const cnpjDigits  = input.cnpj.replace(/\D/g, '');
+            const token       = crypto.createHmac('sha256', approvalSecret).update(cnpjDigits).digest('base64url');
+            const appUrl      = process.env.NEXT_PUBLIC_APP_URL ?? 'https://clube.sassiimoveis.com.br';
+            const approvalUrl = `${appUrl}/api/admin/parceiros/aprovar?cnpj=${encodeURIComponent(input.cnpj)}&token=${token}`;
+
+            enviarEmailNovoLead({
+              nomeParceiro: input.nomeEmpresa,
+              cnpj:         input.cnpj,
+              segmento:     input.segmento,
+              responsavel:  input.responsavel,
+              whatsapp:     input.whatsapp,
+              approvalUrl,
+            }).catch((err) => {
+              console.error('[sheets-sync] Falha ao enviar e-mail de lead ao admin:', err);
+            });
+          }
         }
       } catch (err) {
         erros++;
