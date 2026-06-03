@@ -23,7 +23,12 @@ const dmSans = localFont({
 export const metadata: Metadata = {
   title: 'Sassi Imóveis — Área do Inquilino',
   description: 'Portal exclusivo de benefícios para inquilinos Sassi Imóveis.',
-  robots: { index: false, follow: false }, // portal privado
+  robots: { index: false, follow: false },
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    viewportFit: 'cover', // respeita notch e home bar do iPhone
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

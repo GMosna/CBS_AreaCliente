@@ -22,7 +22,8 @@ export function CupomFisico({ parceiro }: CupomFisicoProps) {
       style={{
         backgroundColor: '#ffffff',
         color: '#111111',
-        width: '360px',
+        width: '100%',
+        maxWidth: '360px',
         fontFamily: 'system-ui, -apple-system, sans-serif',
         borderRadius: '8px',
         overflow: 'hidden',

@@ -352,14 +352,25 @@ select {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  /* Ocupa toda a área segura no iOS */
+  min-height: 100dvh;
 }
 
 .portal-main {
   flex: 1;
-  padding: var(--space-8) var(--space-6);
+  padding: var(--space-4) var(--space-4);
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
+  /* Espaço para a bottom nav no mobile */
+  padding-bottom: calc(var(--space-4) + 72px);
+}
+
+@media (min-width: 768px) {
+  .portal-main {
+    padding: var(--space-8) var(--space-6);
+    padding-bottom: var(--space-8);
+  }
 }
 
 /* ================================================================
