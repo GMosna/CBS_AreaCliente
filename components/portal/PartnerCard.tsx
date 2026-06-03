@@ -59,11 +59,28 @@ export function PartnerCard({ parceiro, mode = 'grid' }: PartnerCardProps) {
                 </span>
               )}
             </div>
-            {parceiro.segmento && (
-              <span className="inline-block mt-1 text-[10px] font-medium uppercase tracking-wide text-[#9ca3af] bg-[#222] border border-[#2a2a2a] px-2 py-0.5 rounded-full">
-                {parceiro.segmento}
-              </span>
-            )}
+            <div className="flex flex-wrap items-center gap-1 mt-1">
+              {parceiro.segmento && (
+                <span className="inline-block text-[10px] font-medium uppercase tracking-wide text-[#9ca3af] bg-[#222] border border-[#2a2a2a] px-2 py-0.5 rounded-full">
+                  {parceiro.segmento}
+                </span>
+              )}
+              {parceiro.tipo_loja === 'fisica' && (
+                <span className="inline-block text-[10px] font-medium uppercase tracking-wide bg-[#1a1a1a] border border-[#3a3a3a] text-[#9ca3af] px-2 py-0.5 rounded-full">
+                  🏪 Física
+                </span>
+              )}
+              {parceiro.tipo_loja === 'online' && (
+                <span className="inline-block text-[10px] font-medium uppercase tracking-wide bg-[#1a1a1a] border border-[#3b82f6]/30 text-[#3b82f6] px-2 py-0.5 rounded-full">
+                  💻 Online
+                </span>
+              )}
+              {parceiro.tipo_loja === 'ambos' && (
+                <span className="inline-block text-[10px] font-medium uppercase tracking-wide bg-[#1a1a1a] border border-[#e43333]/30 text-[#e43333] px-2 py-0.5 rounded-full">
+                  🏪💻 Físico e Online
+                </span>
+              )}
+            </div>
           </div>
         </div>
 

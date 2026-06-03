@@ -222,6 +222,25 @@ const rowSchema = z.object({
     .string()
     .optional()
     .transform((s) => s?.trim() || undefined),
+
+  tipoLoja: z
+    .string()
+    .optional()
+    .transform((s) => {
+      const v = s?.trim().toLowerCase() || 'fisica';
+      if (v === 'online' || v === 'ambos') return v as 'online' | 'ambos';
+      return 'fisica' as const;
+    }),
+
+  codigoCupom: z
+    .string()
+    .optional()
+    .transform((s) => s?.trim() || undefined),
+
+  urlLoja: z
+    .string()
+    .optional()
+    .transform((s) => s?.trim() || undefined),
 });
 
 // ============================================================
@@ -275,8 +294,8 @@ export class SheetsSyncService {
 
     const token = await this.authenticate();
 
-    // Lê especificamente da aba "Inscrições", colunas A até O (15 colunas)
-    const range = encodeURIComponent('Inscrições!A:O');
+    // Lê especificamente da aba "Inscrições", colunas A até R (18 colunas)
+    const range = encodeURIComponent('Inscrições!A:R');
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetsId}/values/${range}`;
 
     const response = await fetch(url, {
@@ -312,6 +331,9 @@ export class SheetsSyncService {
       logoUrl:            (cells[12] ?? '').trim(),
       mensagem:           (cells[13] ?? '').trim(),
       timestamp:          (cells[14] ?? '').trim(),
+      tipoLoja:           (cells[15] ?? '').trim(),
+      codigoCupom:        (cells[16] ?? '').trim(),
+      urlLoja:            (cells[17] ?? '').trim(),
       rowIndex:           index + 2,
     }));
   }
@@ -334,6 +356,9 @@ export class SheetsSyncService {
       siteInstagram:      row.siteInstagram       || undefined,
       logoUrl:            row.logoUrl             || undefined,
       mensagem:           row.mensagem            || undefined,
+      tipoLoja:           row.tipoLoja            || undefined,
+      codigoCupom:        row.codigoCupom         || undefined,
+      urlLoja:            row.urlLoja             || undefined,
     });
 
     if (!result.success) {
@@ -417,6 +442,9 @@ export class SheetsSyncService {
               site_instagram:      input.siteInstagram        ?? null,
               logo_url:            input.logoUrl              ?? null,
               mensagem:            input.mensagem             ?? null,
+              tipo_loja:           input.tipoLoja             ?? 'fisica',
+              codigo_cupom:        input.codigoCupom          ?? null,
+              url_loja:            input.urlLoja              ?? null,
               data_cadastro:       parsarTimestamp(row.timestamp),
               sheets_row_id:       String(row.rowIndex),
             })
@@ -442,6 +470,9 @@ export class SheetsSyncService {
               site_instagram:      input.siteInstagram        ?? null,
               logo_url:            input.logoUrl              ?? null,
               mensagem:            input.mensagem             ?? null,
+              tipo_loja:           input.tipoLoja             ?? 'fisica',
+              codigo_cupom:        input.codigoCupom          ?? null,
+              url_loja:            input.urlLoja              ?? null,
               data_cadastro:       parsarTimestamp(row.timestamp),
               sheets_row_id:       String(row.rowIndex),
               origem:              'sheets',

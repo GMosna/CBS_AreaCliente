@@ -11,6 +11,9 @@ export type ParceiroDb = {
   desconto_descricao: string;
   frequencia_desconto: string | null;
   logo_url: string | null;
+  tipo_loja: 'fisica' | 'online' | 'ambos' | null;
+  codigo_cupom: string | null;
+  url_loja: string | null;
   ativo: boolean;
   aprovado: boolean;
   destaque: boolean;
@@ -29,6 +32,9 @@ export type ParceiroListItem = Pick<
   | 'logo_url'
   | 'destaque'
   | 'whatsapp'
+  | 'tipo_loja'
+  | 'codigo_cupom'
+  | 'url_loja'
   | 'created_at'
 >;
 

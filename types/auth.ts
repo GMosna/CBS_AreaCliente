@@ -27,7 +27,12 @@ export type AuditAcao =
   | 'token_refresh'
   | 'visualizou_parceiro'
   | 'copiou_desconto'
-  | 'preferencia_atualizada';
+  | 'preferencia_atualizada'
+  | 'visualizou_cupom_fisico'
+  | 'baixou_cupom'
+  | 'copiou_codigo_online'
+  | 'acessou_loja_online'
+  | 'clicou_whatsapp';
 
 /** Body esperado na requisição POST /api/auth/login */
 export type LoginRequest = {

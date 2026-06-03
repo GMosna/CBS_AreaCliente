@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { logAudit } from '@/lib/audit';
+import type { AuditAcao } from '@/types/auth';
 
 function getSupabase() {
   return createClient(
@@ -36,7 +37,16 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   return NextResponse.json({ parceiro: data });
 }
 
-// POST: registra visualização no audit_log (disparado pelo DiscountModal)
+const ACOES_VALIDAS = new Set([
+  'visualizou_parceiro',
+  'visualizou_cupom_fisico',
+  'baixou_cupom',
+  'copiou_codigo_online',
+  'acessou_loja_online',
+  'clicou_whatsapp',
+]);
+
+// POST: registra ação no audit_log (disparado pelo DiscountModal)
 export async function POST(request: NextRequest, { params }: RouteParams) {
   const inquilinoId = request.headers.get('x-inquilino-id');
   if (!inquilinoId) {
@@ -44,6 +54,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   }
 
   const { id } = await params;
-  await logAudit('visualizou_parceiro', request, inquilinoId, { parceiro_id: id });
+
+  let acao: AuditAcao = 'visualizou_parceiro';
+  try {
+    const body = await request.json() as { acao?: string };
+    if (body.acao && ACOES_VALIDAS.has(body.acao)) {
+      acao = body.acao as AuditAcao;
+    }
+  } catch {
+    // body vazio ou não-JSON → usa ação padrão
+  }
+
+  await logAudit(acao, request, inquilinoId, { parceiro_id: id });
   return NextResponse.json({ ok: true });
 }

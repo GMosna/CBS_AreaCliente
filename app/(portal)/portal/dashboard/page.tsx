@@ -25,7 +25,7 @@ export default async function DashboardPage() {
       .single(),
     supabase
       .from('parceiros')
-      .select('id, nome_empresa, segmento, desconto_descricao, frequencia_desconto, logo_url, destaque, whatsapp, created_at')
+      .select('id, nome_empresa, segmento, desconto_descricao, frequencia_desconto, logo_url, destaque, whatsapp, tipo_loja, codigo_cupom, url_loja, created_at')
       .eq('ativo', true)
       .eq('aprovado', true)
       .order('destaque', { ascending: false })

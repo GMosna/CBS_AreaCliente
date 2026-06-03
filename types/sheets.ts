@@ -33,6 +33,9 @@ export type RawSheetRow = {
   logoUrl: string;
   mensagem: string;
   timestamp: string;
+  tipoLoja: string;
+  codigoCupom: string;
+  urlLoja: string;
   rowIndex: number;
 };
 
@@ -51,6 +54,9 @@ export type ParceiroInput = {
   siteInstagram?: string;
   logoUrl?: string;
   mensagem?: string;
+  tipoLoja?: 'fisica' | 'online' | 'ambos';
+  codigoCupom?: string;
+  urlLoja?: string;
 };
 
 /** Resultado da validação de uma linha */
