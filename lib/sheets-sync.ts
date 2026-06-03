@@ -294,8 +294,9 @@ export class SheetsSyncService {
 
     const token = await this.authenticate();
 
-    // Lê especificamente da aba "Inscrições", colunas A até R (18 colunas)
-    const range = encodeURIComponent('Inscrições!A:R');
+    // Lê especificamente da aba "Inscrições", colunas A até S (19 colunas)
+    // P=15 Tipo de Loja | Q=16 Código do Cupom | R=17 Status (ignorado) | S=18 URL da Loja (futuro)
+    const range = encodeURIComponent('Inscrições!A:S');
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetsId}/values/${range}`;
 
     const response = await fetch(url, {
@@ -331,9 +332,10 @@ export class SheetsSyncService {
       logoUrl:            (cells[12] ?? '').trim(),
       mensagem:           (cells[13] ?? '').trim(),
       timestamp:          (cells[14] ?? '').trim(),
-      tipoLoja:           (cells[15] ?? '').trim(),
-      codigoCupom:        (cells[16] ?? '').trim(),
-      urlLoja:            (cells[17] ?? '').trim(),
+      tipoLoja:           (cells[15] ?? '').trim(), // coluna P — Tipo de Loja
+      codigoCupom:        (cells[16] ?? '').trim(), // coluna Q — Código do Cupom
+      // cells[17] = coluna R — Status (ignorado no sync)
+      urlLoja:            (cells[18] ?? '').trim(), // coluna S — URL da Loja (a adicionar na planilha)
       rowIndex:           index + 2,
     }));
   }
