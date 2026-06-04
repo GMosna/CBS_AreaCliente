@@ -78,6 +78,8 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const cnpjLimpo = cnpj.replace(/\D/g, '');
+
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -101,7 +103,7 @@ export async function GET(request: NextRequest) {
   if (!parceiro) {
     return htmlResposta(
       'Parceiro não encontrado',
-      `O parceiro com CNPJ <strong>${cnpj}</strong> ainda não foi sincronizado.<br/>Aguarde até 1 hora após o cadastro e tente novamente.`,
+      `O parceiro com CNPJ <strong>${cnpjLimpo}</strong> ainda não foi sincronizado.<br/>Aguarde até 1 hora após o cadastro e tente novamente.`,
       false
     );
   }

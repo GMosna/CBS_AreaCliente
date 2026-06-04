@@ -7,7 +7,14 @@
 const APP_URL    = process.env.NEXT_PUBLIC_APP_URL  ?? 'https://clube.sassiimoveis.com.br';
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL    ?? 'Clube Sassi <noreply@sassiimoveis.com.br>';
 
+function escHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 function buildHtml(nomeParceiro: string, segmento?: string | null, desconto?: string | null): string {
+  nomeParceiro = escHtml(nomeParceiro);
+  segmento     = segmento  ? escHtml(segmento)  : segmento;
+  desconto     = desconto  ? escHtml(desconto)  : desconto;
   const segmentoHtml = segmento
     ? `<p style="margin:0 0 16px;color:#9ca3af;font-size:13px;text-transform:uppercase;letter-spacing:1px;">${segmento}</p>`
     : '';
@@ -70,6 +77,12 @@ function buildLeadHtml(
   whatsapp: string | null | undefined,
   approvalUrl: string,
 ): string {
+  nomeParceiro = escHtml(nomeParceiro);
+  cnpj         = escHtml(cnpj);
+  segmento     = segmento    ? escHtml(segmento)    : segmento;
+  responsavel  = responsavel ? escHtml(responsavel) : responsavel;
+  whatsapp     = whatsapp    ? escHtml(whatsapp)    : whatsapp;
+
   const linhas = [
     segmento   ? `<tr><td style="padding:4px 0;color:#9ca3af;font-size:13px;">Segmento</td><td style="padding:4px 0 4px 16px;color:#fff;font-size:13px;">${segmento}</td></tr>` : '',
     responsavel ? `<tr><td style="padding:4px 0;color:#9ca3af;font-size:13px;">Responsável</td><td style="padding:4px 0 4px 16px;color:#fff;font-size:13px;">${responsavel}</td></tr>` : '',

@@ -444,23 +444,23 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
                   <p className="text-center text-[#9ca3af] text-sm">
                     Apresente este benefício na loja
                   </p>
-                  <BotaoWhatsApp />
+                  {BotaoWhatsApp()}
                 </>
               )}
 
               {/* FÍSICA com cupom */}
               {temCupom && (tipoLoja === 'fisica') && (
                 <>
-                  <BotaoCupomFisico />
-                  <BotaoWhatsApp />
+                  {BotaoCupomFisico()}
+                  {BotaoWhatsApp()}
                 </>
               )}
 
               {/* ONLINE com cupom */}
               {temCupom && tipoLoja === 'online' && (
                 <>
-                  <SecaoOnline />
-                  <BotaoWhatsApp />
+                  {SecaoOnline()}
+                  {BotaoWhatsApp()}
                 </>
               )}
 
@@ -472,7 +472,7 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
                     <p className="text-[#9ca3af] text-xs uppercase tracking-widest mb-3 font-medium flex items-center gap-1.5">
                       🏪 Loja Física
                     </p>
-                    <BotaoCupomFisico />
+                    {BotaoCupomFisico()}
                   </div>
 
                   {/* Seção online */}
@@ -480,10 +480,10 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
                     <p className="text-[#9ca3af] text-xs uppercase tracking-widest mb-3 font-medium flex items-center gap-1.5">
                       💻 Loja Online
                     </p>
-                    <SecaoOnline />
+                    {SecaoOnline()}
                   </div>
 
-                  <BotaoWhatsApp />
+                  {BotaoWhatsApp()}
                 </>
               )}
 
