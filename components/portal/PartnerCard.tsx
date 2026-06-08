@@ -63,12 +63,8 @@ export const PartnerCard = memo(function PartnerCard({ parceiro, mode = 'grid' }
           )}
         </div>
 
-        {/* Preview do desconto */}
-        <p className="text-[#9ca3af] text-sm line-clamp-2 mb-3 leading-relaxed text-center flex-1">
-          {parceiro.desconto_descricao}
-        </p>
-
         {/* Badge tipo de loja */}
+        <div className="flex-1" />
         <div className="flex justify-center mb-4">
           {parceiro.tipo_loja === 'fisica' && (
             <span className="text-[10px] font-medium uppercase tracking-wide bg-[#1a1a1a] border border-[#3a3a3a] text-[#9ca3af] px-2 py-0.5 rounded-full">

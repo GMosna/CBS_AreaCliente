@@ -486,6 +486,25 @@ select {
 }
 
 /* ================================================================
+   CARROSSEL DE NOVIDADES — scroll infinito e suave
+   ================================================================ */
+@keyframes carousel-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.carousel-track {
+  display: flex;
+  gap: 16px;
+  width: max-content;
+  animation: carousel-scroll 40s linear infinite;
+}
+
+.carousel-track:hover {
+  animation-play-state: paused;
+}
+
+/* ================================================================
    PAGE TITLE
    ================================================================ */
 .page-title {
