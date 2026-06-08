@@ -1,14 +1,27 @@
 // ============================================================
-// SASSI IMÓVEIS — Envio de e-mail via Resend
-// Usa fetch direto — sem dependência npm.
-// Se RESEND_API_KEY não estiver configurado, loga aviso e retorna.
+// SASSI IMÓVEIS — Envio de e-mail via Gmail SMTP (nodemailer)
+// Requer GMAIL_USER e GMAIL_APP_PASSWORD no .env
+// Se as variáveis não estiverem configuradas, loga aviso e retorna.
 // ============================================================
 
+import nodemailer from 'nodemailer';
+
 const APP_URL    = process.env.NEXT_PUBLIC_APP_URL  ?? 'https://clube.sassiimoveis.com.br';
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL    ?? 'Clube Sassi <noreply@sassiimoveis.com.br>';
+const FROM_EMAIL = process.env.GMAIL_USER           ?? 'imobiliariasassi@gmail.com';
+const FROM_LABEL = `Clube Sassi <${FROM_EMAIL}>`;
 
 function escHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function getTransporter() {
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_APP_PASSWORD,
+    },
+  });
 }
 
 function buildHtml(nomeParceiro: string, segmento?: string | null, desconto?: string | null): string {
@@ -154,14 +167,15 @@ export async function enviarEmailNovoLead({
   whatsapp?: string | null;
   approvalUrl: string;
 }): Promise<void> {
-  const apiKey     = process.env.RESEND_API_KEY;
+  const user     = process.env.GMAIL_USER;
+  const pass     = process.env.GMAIL_APP_PASSWORD;
   const adminEmails = (process.env.ADMIN_NOTIFICATION_EMAIL ?? '')
     .split(',')
     .map((e) => e.trim())
     .filter(Boolean);
 
-  if (!apiKey) {
-    console.warn('[email] RESEND_API_KEY não configurado — e-mail de lead não enviado');
+  if (!user || !pass) {
+    console.warn('[email] GMAIL_USER ou GMAIL_APP_PASSWORD não configurado — e-mail de lead não enviado');
     return;
   }
   if (adminEmails.length === 0) {
@@ -169,24 +183,15 @@ export async function enviarEmailNovoLead({
     return;
   }
 
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from:    FROM_EMAIL,
+  try {
+    await getTransporter().sendMail({
+      from:    FROM_LABEL,
       to:      adminEmails,
       subject: `Novo Lead — Clube Sassi: ${nomeParceiro}`,
       html:    buildLeadHtml(nomeParceiro, cnpj, segmento, responsavel, whatsapp, approvalUrl),
-    }),
-    signal: AbortSignal.timeout(10_000),
-  });
-
-  if (!res.ok) {
-    const texto = await res.text().catch(() => '');
-    console.error(`[email] Falha ao enviar lead para admin: ${res.status} ${texto}`);
+    });
+  } catch (err) {
+    console.error('[email] Falha ao enviar lead para admin:', err);
   }
 }
 
@@ -205,29 +210,22 @@ export async function enviarEmailNovoParceiro({
   segmento?: string | null;
   desconto?: string | null;
 }): Promise<void> {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    console.warn('[email] RESEND_API_KEY não configurado — e-mail não enviado');
+  const user = process.env.GMAIL_USER;
+  const pass = process.env.GMAIL_APP_PASSWORD;
+
+  if (!user || !pass) {
+    console.warn('[email] GMAIL_USER ou GMAIL_APP_PASSWORD não configurado — e-mail não enviado');
     return;
   }
 
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from:    FROM_EMAIL,
-      to:      [email],
+  try {
+    await getTransporter().sendMail({
+      from:    FROM_LABEL,
+      to:      email,
       subject: `Novo parceiro no Clube Sassi: ${nomeParceiro}`,
       html:    buildHtml(nomeParceiro, segmento, desconto),
-    }),
-    signal: AbortSignal.timeout(10_000),
-  });
-
-  if (!res.ok) {
-    const texto = await res.text().catch(() => '');
-    console.error(`[email] Falha ao enviar para ${email}: ${res.status} ${texto}`);
+    });
+  } catch (err) {
+    console.error(`[email] Falha ao enviar para ${email}:`, err);
   }
 }
