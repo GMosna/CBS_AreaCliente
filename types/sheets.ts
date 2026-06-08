@@ -35,6 +35,7 @@ export type RawSheetRow = {
   timestamp: string;
   tipoLoja: string;
   codigoCupom: string;
+  status: string;
   urlLoja: string;
   rowIndex: number;
 };

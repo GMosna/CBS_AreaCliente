@@ -334,8 +334,8 @@ export class SheetsSyncService {
       timestamp:          (cells[14] ?? '').trim(),
       tipoLoja:           (cells[15] ?? '').trim(), // coluna P — Tipo de Loja
       codigoCupom:        (cells[16] ?? '').trim(), // coluna Q — Código do Cupom
-      // cells[17] = coluna R — Status (ignorado no sync)
-      urlLoja:            (cells[18] ?? '').trim(), // coluna S — URL da Loja (a adicionar na planilha)
+      status:             (cells[17] ?? '').trim(), // coluna R — Status (Pendente | Aprovado)
+      urlLoja:            (cells[18] ?? '').trim(), // coluna S — URL da Loja
       rowIndex:           index + 2,
     }));
   }
@@ -428,34 +428,40 @@ export class SheetsSyncService {
           .maybeSingle();
 
         if (existing) {
-          // UPDATE — preserva o campo 'aprovado' atual (não resetar para false)
+          // UPDATE — se Status = Aprovado propaga aprovado: true;
+          //           caso contrário preserva o valor atual do banco
+          const aprovadoNoSheet = row.status.toLowerCase() === 'aprovado';
+          const updatePayload: Record<string, unknown> = {
+            nome_empresa:        input.nomeEmpresa,
+            segmento:            input.segmento            ?? null,
+            responsavel:         input.responsavel          ?? null,
+            whatsapp:            input.whatsapp             ?? null,
+            email:               input.email                ?? null,
+            endereco:            input.endereco             ?? null,
+            desconto_descricao:  input.descontoDescricao,
+            frequencia_desconto: input.frequenciaDesconto   ?? null,
+            percentual_desconto: input.percentualDesconto   ?? null,
+            site_instagram:      input.siteInstagram        ?? null,
+            logo_url:            input.logoUrl              ?? null,
+            mensagem:            input.mensagem             ?? null,
+            tipo_loja:           input.tipoLoja             ?? 'fisica',
+            codigo_cupom:        input.codigoCupom          ?? null,
+            url_loja:            input.urlLoja              ?? null,
+            data_cadastro:       parsarTimestamp(row.timestamp),
+            sheets_row_id:       String(row.rowIndex),
+          };
+          if (aprovadoNoSheet) updatePayload.aprovado = true;
+
           const { error } = await this.supabase
             .from('parceiros')
-            .update({
-              nome_empresa:        input.nomeEmpresa,
-              segmento:            input.segmento            ?? null,
-              responsavel:         input.responsavel          ?? null,
-              whatsapp:            input.whatsapp             ?? null,
-              email:               input.email                ?? null,
-              endereco:            input.endereco             ?? null,
-              desconto_descricao:  input.descontoDescricao,
-              frequencia_desconto: input.frequenciaDesconto   ?? null,
-              percentual_desconto: input.percentualDesconto   ?? null,
-              site_instagram:      input.siteInstagram        ?? null,
-              logo_url:            input.logoUrl              ?? null,
-              mensagem:            input.mensagem             ?? null,
-              tipo_loja:           input.tipoLoja             ?? 'fisica',
-              codigo_cupom:        input.codigoCupom          ?? null,
-              url_loja:            input.urlLoja              ?? null,
-              data_cadastro:       parsarTimestamp(row.timestamp),
-              sheets_row_id:       String(row.rowIndex),
-            })
+            .update(updatePayload)
             .eq('id', existing.id);
 
           if (error) throw new Error(error.message);
           atualizados++;
         } else {
-          // INSERT — aprovado: false SEMPRE (nunca auto-aprovado)
+          // INSERT — aprovado reflete o Status da planilha
+          const aprovadoNoSheet = row.status.toLowerCase() === 'aprovado';
           const { error } = await this.supabase
             .from('parceiros')
             .insert({
@@ -478,31 +484,33 @@ export class SheetsSyncService {
               data_cadastro:       parsarTimestamp(row.timestamp),
               sheets_row_id:       String(row.rowIndex),
               origem:              'sheets',
-              aprovado:            false,
+              aprovado:            aprovadoNoSheet,
               ativo:               true,
             });
 
           if (error) throw new Error(error.message);
           inseridos++;
 
-          // Notificar admin com link de aprovação (fire and forget)
-          const approvalSecret = process.env.APPROVAL_SECRET;
-          if (approvalSecret) {
-            const cnpjDigits  = input.cnpj.replace(/\D/g, '');
-            const token       = crypto.createHmac('sha256', approvalSecret).update(cnpjDigits).digest('base64url');
-            const appUrl      = process.env.NEXT_PUBLIC_APP_URL ?? 'https://clube.sassiimoveis.com.br';
-            const approvalUrl = `${appUrl}/api/admin/parceiros/aprovar?cnpj=${encodeURIComponent(input.cnpj)}&token=${token}`;
+          // Notificar admin com link de aprovação apenas se ainda pendente
+          if (!aprovadoNoSheet) {
+            const approvalSecret = process.env.APPROVAL_SECRET;
+            if (approvalSecret) {
+              const cnpjDigits  = input.cnpj.replace(/\D/g, '');
+              const token       = crypto.createHmac('sha256', approvalSecret).update(cnpjDigits).digest('base64url');
+              const appUrl      = process.env.NEXT_PUBLIC_APP_URL ?? 'https://clube.sassiimoveis.com.br';
+              const approvalUrl = `${appUrl}/api/admin/parceiros/aprovar?cnpj=${encodeURIComponent(input.cnpj)}&token=${token}`;
 
-            enviarEmailNovoLead({
-              nomeParceiro: input.nomeEmpresa,
-              cnpj:         input.cnpj,
-              segmento:     input.segmento,
-              responsavel:  input.responsavel,
-              whatsapp:     input.whatsapp,
-              approvalUrl,
-            }).catch((err) => {
-              console.error('[sheets-sync] Falha ao enviar e-mail de lead ao admin:', err);
-            });
+              enviarEmailNovoLead({
+                nomeParceiro: input.nomeEmpresa,
+                cnpj:         input.cnpj,
+                segmento:     input.segmento,
+                responsavel:  input.responsavel,
+                whatsapp:     input.whatsapp,
+                approvalUrl,
+              }).catch((err) => {
+                console.error('[sheets-sync] Falha ao enviar e-mail de lead ao admin:', err);
+              });
+            }
           }
         }
       } catch (err) {

@@ -486,21 +486,21 @@ select {
 }
 
 /* ================================================================
-   CARROSSEL DE NOVIDADES — scroll infinito e suave
+   CARROSSEL DE LOGOS — strip full-width, scroll infinito e suave
    ================================================================ */
-@keyframes carousel-scroll {
+@keyframes logos-scroll {
   0%   { transform: translateX(0); }
   100% { transform: translateX(-50%); }
 }
 
-.carousel-track {
+.logos-track {
   display: flex;
-  gap: 16px;
+  align-items: center;
   width: max-content;
-  animation: carousel-scroll 40s linear infinite;
+  animation: logos-scroll 30s linear infinite;
 }
 
-.carousel-track:hover {
+.logos-track:hover {
   animation-play-state: paused;
 }
 

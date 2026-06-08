@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useScrollLock } from '@/hooks/useScrollLock';
 import type { ParceiroListItem } from '@/types/parceiro';
 import { buildWhatsAppUrl } from '@/utils/whatsapp';
 import { resolveLogoUrl } from '@/utils/logo';
@@ -196,11 +197,7 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
     return () => document.removeEventListener('keydown', handler);
   }, [open, onClose]);
 
-  // Bloquear scroll
-  useEffect(() => {
-    document.body.style.overflow = open ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
-  }, [open]);
+  useScrollLock(open);
 
   async function copiarCodigo() {
     const codigo = parceiro.codigo_cupom ?? '';
