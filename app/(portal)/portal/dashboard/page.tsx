@@ -2,6 +2,7 @@ import { headers } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
 import { PartnerCard } from '@/components/portal/PartnerCard';
+import { contarBeneficiosDisponiveis } from '@/lib/dashboard';
 import type { ParceiroListItem } from '@/types/parceiro';
 
 function getSupabase() {
@@ -17,7 +18,7 @@ export default async function DashboardPage() {
 
   const supabase = getSupabase();
 
-  const [inquilinoRes, parceirosRes, logadosRes] = await Promise.all([
+  const [inquilinoRes, parceirosRes, beneficiosDisponiveis] = await Promise.all([
     supabase
       .from('inquilinos')
       .select('nome, imovel_referencia')
@@ -30,12 +31,11 @@ export default async function DashboardPage() {
       .eq('aprovado', true)
       .order('destaque', { ascending: false })
       .order('nome_empresa'),
-    supabase.rpc('contar_inquilinos_logados'),
+    contarBeneficiosDisponiveis(inquilinoId),
   ]);
 
-  const inquilino     = inquilinoRes.data;
-  const parceiros     = (parceirosRes.data ?? []) as ParceiroListItem[];
-  const totalClientes = (logadosRes.data as number | null) ?? 0;
+  const inquilino = inquilinoRes.data;
+  const parceiros = (parceirosRes.data ?? []) as ParceiroListItem[];
 
   const agora     = new Date();
   const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
@@ -49,10 +49,9 @@ export default async function DashboardPage() {
     .slice(0, 3);
 
   const metricas = [
-    { valor: totalParceiros, desc: 'empresas ativas',  label: 'Parceiros' },
-    { valor: novosEsteMes,   desc: 'este mês',          label: 'Novos'     },
-    { valor: segmentos,      desc: 'categorias',         label: 'Segmentos' },
-    { valor: totalClientes,   desc: 'já acessaram',        label: 'Clientes' },
+    { valor: totalParceiros, desc: 'empresas ativas', label: 'Parceiros' },
+    { valor: novosEsteMes,   desc: 'este mês',         label: 'Novos'     },
+    { valor: segmentos,      desc: 'categorias',        label: 'Segmentos' },
   ];
 
   const primeiroNome = inquilino?.nome?.trim().split(' ')[0]?.trim() || 'Inquilino';
@@ -85,6 +84,7 @@ export default async function DashboardPage() {
 
       {/* Métricas */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* 3 métricas genéricas */}
         {metricas.map((m) => (
           <div key={m.label} className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-5">
             <p className="text-[#9ca3af] text-xs uppercase tracking-widest mb-2">{m.desc}</p>
@@ -92,6 +92,20 @@ export default async function DashboardPage() {
             <p className="text-[#6b7280] text-sm mt-2">{m.label}</p>
           </div>
         ))}
+
+        {/* Card especial — Benefícios Disponíveis */}
+        <div className="bg-[#1a1a1a] border border-[#e43333]/20 rounded-xl p-5 flex flex-col">
+          <div className="text-2xl mb-2">🎁</div>
+          <p className="font-display text-5xl text-[#e43333] tracking-wide leading-none">
+            {beneficiosDisponiveis}
+          </p>
+          <p className="text-white text-sm font-medium mt-2 leading-tight">
+            Benefícios<br />Disponíveis
+          </p>
+          <p className="text-[#6b7280] text-xs mt-1.5">
+            {beneficiosDisponiveis === 0 ? 'Volte em breve' : 'para você resgatar'}
+          </p>
+        </div>
       </div>
 
       {/* Destaques */}
