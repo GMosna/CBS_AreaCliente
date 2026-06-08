@@ -94,17 +94,14 @@ export default async function DashboardPage() {
         ))}
 
         {/* Card especial — Benefícios Disponíveis */}
-        <div className="bg-[#1a1a1a] border border-[#e43333]/20 rounded-xl p-5 flex flex-col">
-          <div className="text-2xl mb-2">🎁</div>
+        <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-5">
+          <p className="text-[#9ca3af] text-xs uppercase tracking-widest mb-2">
+            {beneficiosDisponiveis === 0 ? 'volte em breve' : 'para você resgatar'}
+          </p>
           <p className="font-display text-5xl text-[#e43333] tracking-wide leading-none">
             {beneficiosDisponiveis}
           </p>
-          <p className="text-white text-sm font-medium mt-2 leading-tight">
-            Benefícios<br />Disponíveis
-          </p>
-          <p className="text-[#6b7280] text-xs mt-1.5">
-            {beneficiosDisponiveis === 0 ? 'Volte em breve' : 'para você resgatar'}
-          </p>
+          <p className="text-[#6b7280] text-sm mt-2">Benefícios Disponíveis</p>
         </div>
       </div>
 
