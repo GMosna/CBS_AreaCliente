@@ -31,12 +31,12 @@ export const PartnerCard = memo(function PartnerCard({ parceiro, mode = 'grid' }
         aria-label={`Ver benefício: ${parceiro.nome_empresa}`}
       >
         {/* Área da logo */}
-        <div className="w-full flex items-center justify-center p-5 bg-[#111] rounded-xl mb-4 min-h-[152px]">
+        <div className="w-full h-40 bg-[#111] rounded-xl mb-4 overflow-hidden flex items-center justify-center">
           {logoSrc && !logoError ? (
             <img
               src={logoSrc}
               alt={parceiro.nome_empresa}
-              className="object-contain max-h-[120px] max-w-[120px] w-auto"
+              className="w-full h-full object-contain"
               onError={() => setLogoError(true)}
             />
           ) : (
@@ -112,7 +112,7 @@ export const PartnerCard = memo(function PartnerCard({ parceiro, mode = 'grid' }
 export function PartnerCardSkeleton() {
   return (
     <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl p-4">
-      <div className="w-full h-[152px] bg-[#222] animate-shimmer rounded-xl mb-4" style={{ backgroundSize: '200% 100%' }} />
+      <div className="w-full h-40 bg-[#222] animate-shimmer rounded-xl mb-4" style={{ backgroundSize: '200% 100%' }} />
       <div className="h-5 bg-[#222] animate-shimmer rounded w-3/4 mx-auto mb-2" style={{ backgroundSize: '200% 100%' }} />
       <div className="h-3 bg-[#222] animate-shimmer rounded w-1/3 mx-auto mb-3" style={{ backgroundSize: '200% 100%' }} />
       <div className="space-y-1.5 mb-3">
