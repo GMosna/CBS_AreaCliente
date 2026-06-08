@@ -362,8 +362,8 @@ select {
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
-  /* Espaço para a bottom nav no mobile */
-  padding-bottom: calc(var(--space-4) + 72px);
+  /* Espaço para a bottom nav (64px) + safe-area do iPhone */
+  padding-bottom: calc(var(--space-4) + 64px + env(safe-area-inset-bottom, 0px));
 }
 
 @media (min-width: 768px) {
