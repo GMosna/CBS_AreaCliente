@@ -1,6 +1,7 @@
 'use client';
 
-import { memo, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { DiscountModal } from './DiscountModal';
 import { FallbackLogo } from './FallbackLogo';
 import { resolveLogoUrl } from '@/utils/logo';
@@ -14,6 +15,8 @@ interface PartnerCardProps {
 export const PartnerCard = memo(function PartnerCard({ parceiro, mode = 'grid' }: PartnerCardProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [logoError, setLogoError] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   const logoSrc = resolveLogoUrl(parceiro.logo_url);
 
@@ -95,11 +98,14 @@ export const PartnerCard = memo(function PartnerCard({ parceiro, mode = 'grid' }
         </div>
       </article>
 
-      <DiscountModal
-        parceiro={parceiro}
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-      />
+      {mounted && createPortal(
+        <DiscountModal
+          parceiro={parceiro}
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+        />,
+        document.body
+      )}
     </>
   );
 });
