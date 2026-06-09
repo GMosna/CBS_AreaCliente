@@ -495,6 +495,7 @@ select {
 
 .novidades-track {
   display: flex;
+  align-items: stretch;
   gap: 24px;
   width: max-content;
   padding-left: 24px;

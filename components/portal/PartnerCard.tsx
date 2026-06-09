@@ -25,7 +25,7 @@ export const PartnerCard = memo(function PartnerCard({ parceiro, mode = 'grid' }
       <article
         onClick={() => setModalOpen(true)}
         className={[
-          'group relative bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl flex flex-col',
+          'group relative bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl flex flex-col h-full',
           'cursor-pointer transition-all duration-200',
           'hover:-translate-y-1 hover:border-[#e43333]/50',
           'hover:shadow-[0_8px_32px_rgba(228,51,51,0.15)]',

@@ -22,7 +22,7 @@ export function NovidadesCarousel({ parceiros }: NovidadesCarouselProps) {
       <div className="overflow-hidden">
         <div className="novidades-track py-2">
           {itens.map((p, i) => (
-            <div key={`${p.id}-${i}`} className="w-64 shrink-0">
+            <div key={`${p.id}-${i}`} className="w-64 shrink-0 h-full">
               <PartnerCard parceiro={p} />
             </div>
           ))}
