@@ -2,6 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Desabilitar seleção de texto em todo o portal */
+* {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+}
+
+/* Reabilitar onde faz sentido selecionar */
+input,
+textarea,
+[contenteditable='true'],
+p,
+.selectable {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  user-select: text;
+}
+
+/* Cursor correto em elementos estáticos */
+span,
+div,
+h1, h2, h3, h4, h5, h6,
+li,
+label {
+  cursor: default;
+}
+
 /* ================================================================
    SASSI IMÓVEIS — Design System
    ================================================================ */

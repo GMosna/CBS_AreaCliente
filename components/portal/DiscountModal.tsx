@@ -272,7 +272,7 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
         </p>
         <div className="bg-[#111] border border-[#2a2a2a] rounded-xl p-4 text-center mb-3">
           <span
-            className="text-white text-3xl font-bold tracking-widest"
+            className="text-white text-3xl font-bold tracking-widest select-all"
             style={{ fontFamily: 'monospace' }}
           >
             {parceiro.codigo_cupom}
