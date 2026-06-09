@@ -2,7 +2,6 @@ import { headers } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
 import { PartnerCard } from '@/components/portal/PartnerCard';
-import { NovidadesCarousel } from '@/components/portal/NovidadesCarousel';
 import { contarBeneficiosDisponiveis } from '@/lib/dashboard';
 import type { ParceiroListItem } from '@/types/parceiro';
 
@@ -118,13 +117,15 @@ export default async function DashboardPage() {
         </section>
       )}
 
-      {/* Novidades — carrossel automático */}
+      {/* Novidades */}
       {novidades.length > 0 && (
         <section>
           <h2 className="font-display text-2xl tracking-wider text-white mb-4">
             NOVIDADES
           </h2>
-          <NovidadesCarousel parceiros={novidades} />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {novidades.map((p) => <PartnerCard key={p.id} parceiro={p} />)}
+          </div>
         </section>
       )}
 
