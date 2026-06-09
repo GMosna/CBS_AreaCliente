@@ -9,24 +9,14 @@
   user-select: none;
 }
 
-/* Reabilitar onde faz sentido selecionar */
+/* Reabilitar apenas em campos editáveis e classes explícitas */
 input,
 textarea,
 [contenteditable='true'],
-p,
 .selectable {
   -webkit-user-select: text;
   -moz-user-select: text;
   user-select: text;
-}
-
-/* Cursor correto em elementos estáticos */
-span,
-div,
-h1, h2, h3, h4, h5, h6,
-li,
-label {
-  cursor: default;
 }
 
 /* ================================================================
