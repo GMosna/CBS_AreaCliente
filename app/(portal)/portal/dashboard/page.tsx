@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
 import { PartnerCard } from '@/components/portal/PartnerCard';
 import { NovidadesCarousel } from '@/components/portal/NovidadesCarousel';
+import { BeneficiosCard } from '@/components/portal/BeneficiosCard';
 import { contarBeneficiosDisponiveis } from '@/lib/dashboard';
 import type { ParceiroListItem } from '@/types/parceiro';
 
@@ -94,16 +95,8 @@ export default async function DashboardPage() {
           </div>
         ))}
 
-        {/* Card especial — Benefícios Disponíveis */}
-        <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-5">
-          <p className="text-[#9ca3af] text-xs uppercase tracking-widest mb-2">
-            {beneficiosDisponiveis === 0 ? 'volte em breve' : 'para você resgatar'}
-          </p>
-          <p className="font-display text-5xl text-[#e43333] tracking-wide leading-none">
-            {beneficiosDisponiveis}
-          </p>
-          <p className="text-[#6b7280] text-sm mt-2">Benefícios Disponíveis</p>
-        </div>
+        {/* Card especial — Benefícios Disponíveis (reativo via CustomEvent) */}
+        <BeneficiosCard inicial={beneficiosDisponiveis} />
       </div>
 
       {/* Destaques */}

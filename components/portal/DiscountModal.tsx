@@ -20,7 +20,6 @@ function CupomModal({ parceiro, onClose }: CupomModalProps) {
   const [downloadStatus, setDownloadStatus] = useState<'idle' | 'loading' | 'done'>('idle');
   const [copiouCodigo, setCopiouCodigo] = useState(false);
 
-  // Fechar com Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', handler);
@@ -30,7 +29,6 @@ function CupomModal({ parceiro, onClose }: CupomModalProps) {
   async function baixarCupom() {
     setDownloadStatus('loading');
     try {
-      // html-to-image precisa estar instalado: npm install html-to-image
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { toPng } = await import('html-to-image' as any);
       const el = document.getElementById('cupom-fisico');
@@ -42,7 +40,6 @@ function CupomModal({ parceiro, onClose }: CupomModalProps) {
       link.click();
       setDownloadStatus('done');
       setTimeout(() => setDownloadStatus('idle'), 3000);
-      // Registrar audit
       fetch(`/api/portal/parceiros/${parceiro.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -85,17 +82,11 @@ function CupomModal({ parceiro, onClose }: CupomModalProps) {
       aria-modal="true"
       aria-label="Cupom físico"
     >
-      {/* Overlay */}
-      <div
-        className="absolute inset-0 bg-black/85"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-black/85" onClick={onClose} />
 
       <div className="relative z-10 flex flex-col items-center gap-4 p-4 max-w-sm w-full mx-4">
-        {/* Cupom */}
         <CupomFisico parceiro={parceiro} />
 
-        {/* Botões de ação */}
         <div className="flex flex-col gap-2 w-full" style={{ maxWidth: '360px' }}>
           <button
             onClick={baixarCupom}
@@ -135,8 +126,7 @@ function CupomModal({ parceiro, onClose }: CupomModalProps) {
               onClick={copiarCodigo}
               className={[
                 'w-full py-3 px-4 rounded-xl font-semibold text-sm',
-                'flex items-center justify-center gap-2 transition-all duration-200',
-                'border',
+                'flex items-center justify-center gap-2 transition-all duration-200 border',
                 copiouCodigo
                   ? 'bg-[#22c55e]/15 border-[#22c55e]/30 text-[#22c55e]'
                   : 'bg-transparent border-[#3a3a3a] text-[#9ca3af] hover:border-white hover:text-white',
@@ -171,20 +161,48 @@ function CupomModal({ parceiro, onClose }: CupomModalProps) {
 // DiscountModal — modal principal com lógica de tipo_loja
 // ============================================================
 
+interface BloqueioInfo {
+  mensagem: string;
+  proximoUsoEm: string | null;
+}
+
 interface DiscountModalProps {
   parceiro: ParceiroListItem;
   open: boolean;
   onClose: () => void;
 }
 
+function formatarData(iso: string): string {
+  return new Date(iso).toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
+
 export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
   const [copiouCodigo, setCopiouCodigo] = useState(false);
   const [cupomModalOpen, setCupomModalOpen] = useState(false);
 
+  // Estado de uso / bloqueio
+  const [codigoVisivel, setCodigoVisivel] = useState(false);
+  const [carregandoUso, setCarregandoUso] = useState(false);
+  const [bloqueio, setBloqueio] = useState<BloqueioInfo | null>(null);
+
+  const sessionKey = `cupom_usado_${parceiro.id}`;
+
   const temCupom = Boolean(parceiro.codigo_cupom?.trim());
   const tipoLoja = parceiro.tipo_loja ?? (temCupom ? 'fisica' : null);
 
-  // Registrar visualização no audit_log (fire and forget)
+  // Restaurar estado da sessão ao abrir o modal
+  useEffect(() => {
+    if (!open) return;
+    setBloqueio(null);
+    if (typeof window !== 'undefined' && sessionStorage.getItem(sessionKey)) {
+      setCodigoVisivel(true);
+    }
+  }, [open, sessionKey]);
+
+  // Audit de visualização
   useEffect(() => {
     if (!open) return;
     fetch(`/api/portal/parceiros/${parceiro.id}`, { method: 'POST' }).catch(() => {});
@@ -198,6 +216,49 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
   }, [open, onClose]);
 
   useScrollLock(open);
+
+  // ── Lógica de uso ────────────────────────────────────────
+
+  async function handleVerCupom(modo: 'fisica' | 'online') {
+    if (carregandoUso) return;
+
+    // Já usado nesta sessão — abrir sem registrar novo uso
+    if (typeof window !== 'undefined' && sessionStorage.getItem(sessionKey)) {
+      if (modo === 'fisica') setCupomModalOpen(true);
+      else setCodigoVisivel(true);
+      return;
+    }
+
+    setCarregandoUso(true);
+    setBloqueio(null);
+
+    try {
+      const res = await fetch(`/api/portal/parceiros/${parceiro.id}/usar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+
+      if (res.ok && data.sucesso) {
+        sessionStorage.setItem(sessionKey, 'true');
+        window.dispatchEvent(new CustomEvent('cupom-usado'));
+
+        if (modo === 'fisica') setCupomModalOpen(true);
+        else setCodigoVisivel(true);
+      } else if (res.status === 429) {
+        setBloqueio({
+          mensagem: data.mensagem ?? 'Benefício temporariamente indisponível.',
+          proximoUsoEm: data.proximoUsoEm ?? null,
+        });
+      }
+    } catch {
+      // Falha silenciosa — não bloqueia o usuário
+    } finally {
+      setCarregandoUso(false);
+    }
+  }
+
+  // ── Outras ações ─────────────────────────────────────────
 
   async function copiarCodigo() {
     const codigo = parceiro.codigo_cupom ?? '';
@@ -219,7 +280,6 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
     }
     setCopiouCodigo(true);
     setTimeout(() => setCopiouCodigo(false), 2500);
-    // Registrar audit
     fetch(`/api/portal/parceiros/${parceiro.id}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -248,91 +308,146 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
     }).catch(() => {});
   }
 
-  function abrirCupomFisico() {
-    setCupomModalOpen(true);
-    fetch(`/api/portal/parceiros/${parceiro.id}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ acao: 'visualizou_cupom_fisico' }),
-    }).catch(() => {});
-  }
-
   const inicial = parceiro.nome_empresa.charAt(0).toUpperCase();
 
   if (!open) return null;
 
   // ── Seções reutilizáveis ─────────────────────────────────
 
-  /** Bloco de código online (cupom online) */
+  function BloqueioDisplay() {
+    if (!bloqueio) return null;
+    return (
+      <div className="text-center p-4 border border-[#981c1c]/40 rounded-xl bg-[#981c1c]/10 mt-2">
+        <p className="text-[#e43333] font-medium text-sm">🔒 {bloqueio.mensagem}</p>
+        {bloqueio.proximoUsoEm && (
+          <p className="text-[#6b7280] text-xs mt-1">
+            Disponível em: {formatarData(bloqueio.proximoUsoEm)}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  function BotaoCupomFisico() {
+    return (
+      <>
+        <button
+          onClick={() => handleVerCupom('fisica')}
+          disabled={carregandoUso}
+          className={[
+            'w-full py-3 px-4 rounded-xl font-semibold text-sm',
+            'flex items-center justify-center gap-2 transition-all duration-200',
+            carregandoUso
+              ? 'bg-[#e43333]/50 text-white cursor-not-allowed'
+              : 'bg-[#e43333] hover:bg-[#981c1c] text-white',
+          ].join(' ')}
+        >
+          {carregandoUso ? (
+            <>
+              <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Verificando...
+            </>
+          ) : (
+            <>🎫 Ver cupom</>
+          )}
+        </button>
+        <BloqueioDisplay />
+      </>
+    );
+  }
+
   function SecaoOnline() {
     return (
       <div className="mb-4">
         <p className="text-[#9ca3af] text-xs uppercase tracking-widest mb-2 font-medium">
           Código online
         </p>
-        <div className="bg-[#111] border border-[#2a2a2a] rounded-xl p-4 text-center mb-3">
-          <span
-            className="text-white text-3xl font-bold tracking-widest select-all"
-            style={{ fontFamily: 'monospace' }}
-          >
-            {parceiro.codigo_cupom}
-          </span>
-          <p className="text-[#6b7280] text-xs mt-2">Cole este código no carrinho</p>
-        </div>
-        <div className="flex flex-col gap-2">
-          <button
-            onClick={copiarCodigo}
-            className={[
-              'w-full py-3 px-4 rounded-xl font-semibold text-sm',
-              'flex items-center justify-center gap-2 transition-all duration-200',
-              copiouCodigo
-                ? 'bg-[#22c55e]/15 border border-[#22c55e]/30 text-[#22c55e]'
-                : 'bg-[#e43333] hover:bg-[#981c1c] text-white',
-            ].join(' ')}
-          >
-            {copiouCodigo ? (
-              <>
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                Copiado!
-              </>
-            ) : (
-              <>
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                </svg>
-                Copiar código
-              </>
-            )}
-          </button>
-          {parceiro.url_loja && (
-            <button
-              onClick={abrirLoja}
-              className="w-full py-3 px-4 rounded-xl font-semibold text-sm bg-transparent border border-[#2a2a2a] text-[#9ca3af] hover:border-[#3b82f6]/50 hover:text-[#3b82f6] flex items-center justify-center gap-2 transition-all duration-200"
-            >
-              Ir para a loja →
-            </button>
-          )}
-        </div>
+
+        {codigoVisivel ? (
+          // Código revelado
+          <>
+            <div className="bg-[#111] border border-[#e43333]/40 rounded-xl p-4 text-center mb-3">
+              <span
+                className="text-white text-3xl font-bold tracking-widest select-all"
+                style={{ fontFamily: 'monospace' }}
+              >
+                {parceiro.codigo_cupom}
+              </span>
+              <p className="text-[#6b7280] text-xs mt-2">Cole este código no carrinho</p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={copiarCodigo}
+                className={[
+                  'w-full py-3 px-4 rounded-xl font-semibold text-sm',
+                  'flex items-center justify-center gap-2 transition-all duration-200',
+                  copiouCodigo
+                    ? 'bg-[#22c55e]/15 border border-[#22c55e]/30 text-[#22c55e]'
+                    : 'bg-[#e43333] hover:bg-[#981c1c] text-white',
+                ].join(' ')}
+              >
+                {copiouCodigo ? (
+                  <>
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    Copiado!
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                    </svg>
+                    Copiar código
+                  </>
+                )}
+              </button>
+              {parceiro.url_loja && (
+                <button
+                  onClick={abrirLoja}
+                  className="w-full py-3 px-4 rounded-xl font-semibold text-sm bg-transparent border border-[#2a2a2a] text-[#9ca3af] hover:border-[#3b82f6]/50 hover:text-[#3b82f6] flex items-center justify-center gap-2 transition-all duration-200"
+                >
+                  Ir para a loja →
+                </button>
+              )}
+            </div>
+          </>
+        ) : (
+          // Código oculto
+          <>
+            <div className="relative mb-3">
+              <div className="bg-[#111] border border-dashed border-[#333] rounded-xl p-4 text-center blur-sm select-none pointer-events-none">
+                <span className="text-white text-3xl font-bold tracking-widest" style={{ fontFamily: 'monospace' }}>
+                  {parceiro.codigo_cupom}
+                </span>
+                <p className="text-[#6b7280] text-xs mt-2">Cole este código no carrinho</p>
+              </div>
+              <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-[#0d0d0d]/60">
+                <button
+                  onClick={() => handleVerCupom('online')}
+                  disabled={carregandoUso}
+                  className={[
+                    'py-3 px-6 rounded-lg font-bold text-sm transition-all duration-200',
+                    carregandoUso
+                      ? 'bg-[#e43333]/50 text-white cursor-not-allowed'
+                      : 'bg-[#e43333] hover:bg-[#981c1c] text-white',
+                  ].join(' ')}
+                >
+                  {carregandoUso ? '⏳ Verificando...' : '👁 Ver cupom'}
+                </button>
+              </div>
+            </div>
+            <BloqueioDisplay />
+          </>
+        )}
       </div>
     );
   }
 
-  /** Botão de cupom físico */
-  function BotaoCupomFisico() {
-    return (
-      <button
-        onClick={abrirCupomFisico}
-        className="w-full py-3 px-4 rounded-xl font-semibold text-sm bg-[#e43333] hover:bg-[#981c1c] text-white flex items-center justify-center gap-2 transition-all duration-200"
-      >
-        🎫 Ver cupom
-      </button>
-    );
-  }
-
-  /** Botão WhatsApp */
   function BotaoWhatsApp() {
     if (!parceiro.whatsapp) return null;
     return (
@@ -356,13 +471,8 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
         aria-modal="true"
         aria-label={`Benefício: ${parceiro.nome_empresa}`}
       >
-        {/* Overlay */}
-        <div
-          className="absolute inset-0 bg-black/75 animate-fade-in"
-          onClick={onClose}
-        />
+        <div className="absolute inset-0 bg-black/75 animate-fade-in" onClick={onClose} />
 
-        {/* Conteúdo: bottom drawer mobile / modal desktop */}
         <div
           className={[
             'relative z-10 w-full bg-[#1a1a1a] border-t border-[#2a2a2a]',
@@ -371,13 +481,12 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
             'animate-slide-up md:animate-scale-in',
           ].join(' ')}
         >
-          {/* Handle mobile */}
           <div className="flex justify-center pt-3 pb-1 md:hidden">
             <div className="w-10 h-1 bg-[#2a2a2a] rounded-full" />
           </div>
 
           <div className="p-6 md:p-8">
-            {/* Header do modal */}
+            {/* Header */}
             <div className="flex items-start justify-between gap-4 mb-6">
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 bg-[#981c1c] flex items-center justify-center">
@@ -418,7 +527,7 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
               <p className="text-[#9ca3af] text-xs uppercase tracking-widest mb-2 font-medium">
                 Seu Benefício
               </p>
-              <p className="text-white text-base leading-relaxed font-medium">
+              <p className="text-white text-base leading-relaxed font-medium selectable">
                 {parceiro.desconto_descricao}
               </p>
               <p className="text-[#9ca3af] text-sm mt-3 flex items-center gap-1.5">
@@ -432,59 +541,50 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
               </p>
             </div>
 
-            {/* ── Ações condicionais por tipo_loja ── */}
+            {/* Ações por tipo_loja */}
             <div className="flex flex-col gap-3">
 
-              {/* SEM cupom — exibir só descrição e WhatsApp */}
               {!temCupom && (
                 <>
                   <p className="text-center text-[#9ca3af] text-sm">
                     Apresente este benefício na loja
                   </p>
-                  {BotaoWhatsApp()}
+                  <BotaoWhatsApp />
                 </>
               )}
 
-              {/* FÍSICA com cupom */}
-              {temCupom && (tipoLoja === 'fisica') && (
+              {temCupom && tipoLoja === 'fisica' && (
                 <>
-                  {BotaoCupomFisico()}
-                  {BotaoWhatsApp()}
+                  <BotaoCupomFisico />
+                  <BotaoWhatsApp />
                 </>
               )}
 
-              {/* ONLINE com cupom */}
               {temCupom && tipoLoja === 'online' && (
                 <>
-                  {SecaoOnline()}
-                  {BotaoWhatsApp()}
+                  <SecaoOnline />
+                  <BotaoWhatsApp />
                 </>
               )}
 
-              {/* AMBOS — física e online */}
               {temCupom && tipoLoja === 'ambos' && (
                 <>
-                  {/* Seção física */}
                   <div className="border border-[#2a2a2a] rounded-xl p-4 mb-1">
                     <p className="text-[#9ca3af] text-xs uppercase tracking-widest mb-3 font-medium flex items-center gap-1.5">
                       🏪 Loja Física
                     </p>
-                    {BotaoCupomFisico()}
+                    <BotaoCupomFisico />
                   </div>
-
-                  {/* Seção online */}
                   <div className="border border-[#2a2a2a] rounded-xl p-4">
                     <p className="text-[#9ca3af] text-xs uppercase tracking-widest mb-3 font-medium flex items-center gap-1.5">
                       💻 Loja Online
                     </p>
-                    {SecaoOnline()}
+                    <SecaoOnline />
                   </div>
-
-                  {BotaoWhatsApp()}
+                  <BotaoWhatsApp />
                 </>
               )}
 
-              {/* Fechar */}
               <button
                 onClick={onClose}
                 className="w-full py-3 px-4 rounded-xl text-sm text-[#6b7280] hover:text-white transition-colors"
@@ -496,7 +596,6 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
         </div>
       </div>
 
-      {/* CupomModal — z-[60] para ficar acima do DiscountModal */}
       {cupomModalOpen && (
         <CupomModal
           parceiro={parceiro}
