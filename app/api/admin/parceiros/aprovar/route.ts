@@ -11,11 +11,22 @@ import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { criarNotificacaoGlobal } from '@/lib/notificacoes';
 
-function validarToken(cnpj: string, token: string): boolean {
+function esc(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// exp: timestamp Unix em segundos de expiração do link
+function validarToken(cnpj: string, token: string, exp: string): boolean {
   const secret = process.env.APPROVAL_SECRET;
   if (!secret) return false;
+
+  // Verificar expiração antes de qualquer operação criptográfica
+  const expNum = parseInt(exp, 10);
+  if (!expNum || expNum < Math.floor(Date.now() / 1000)) return false;
+
   const cnpjLimpo = cnpj.replace(/\D/g, '');
-  const esperado = crypto.createHmac('sha256', secret).update(cnpjLimpo).digest('base64url');
+  const payload   = `${cnpjLimpo}:${exp}`;
+  const esperado  = crypto.createHmac('sha256', secret).update(payload).digest('base64url');
   try {
     const a = Buffer.from(esperado);
     const b = Buffer.from(token);
@@ -37,7 +48,7 @@ function htmlResposta(titulo: string, mensagem: string, ok: boolean): NextRespon
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>${titulo} — Sassi Imóveis</title>
+  <title>${esc(titulo)} — Sassi Imóveis</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{background:#0a0a0a;color:#fff;font-family:system-ui,-apple-system,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
@@ -52,7 +63,7 @@ function htmlResposta(titulo: string, mensagem: string, ok: boolean): NextRespon
 <body>
   <div class="card">
     <div class="icone">${icone}</div>
-    <h1>${titulo}</h1>
+    <h1>${esc(titulo)}</h1>
     <p>${mensagem}</p>
     <p class="marca">SASSI <span>IMÓVEIS</span></p>
   </div>
@@ -69,8 +80,9 @@ export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const cnpj  = searchParams.get('cnpj')  ?? '';
   const token = searchParams.get('token') ?? '';
+  const exp   = searchParams.get('exp')   ?? '';
 
-  if (!cnpj || !token || !validarToken(cnpj, token)) {
+  if (!cnpj || !token || !exp || !validarToken(cnpj, token, exp)) {
     return htmlResposta(
       'Link inválido',
       'Este link de aprovação é inválido ou foi adulterado.',
@@ -122,7 +134,7 @@ export async function GET(request: NextRequest) {
 
   return htmlResposta(
     'Parceiro aprovado!',
-    `<strong>${parceiro.nome_empresa}</strong> foi aprovado com sucesso e já está visível no Clube Sassi.`,
+    `<strong>${esc(parceiro.nome_empresa)}</strong> foi aprovado com sucesso e já está visível no Clube Sassi.`,
     true
   );
 }

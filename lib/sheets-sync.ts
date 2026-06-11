@@ -496,9 +496,11 @@ export class SheetsSyncService {
             const approvalSecret = process.env.APPROVAL_SECRET;
             if (approvalSecret) {
               const cnpjDigits  = input.cnpj.replace(/\D/g, '');
-              const token       = crypto.createHmac('sha256', approvalSecret).update(cnpjDigits).digest('base64url');
+              const expTs       = Math.floor(Date.now() / 1000) + 7 * 24 * 3600;
+              const payload     = `${cnpjDigits}:${expTs}`;
+              const token       = crypto.createHmac('sha256', approvalSecret).update(payload).digest('base64url');
               const appUrl      = process.env.NEXT_PUBLIC_APP_URL ?? 'https://clube.sassiimoveis.com.br';
-              const approvalUrl = `${appUrl}/api/admin/parceiros/aprovar?cnpj=${encodeURIComponent(input.cnpj)}&token=${token}`;
+              const approvalUrl = `${appUrl}/api/admin/parceiros/aprovar?cnpj=${encodeURIComponent(input.cnpj)}&token=${token}&exp=${expTs}`;
 
               enviarEmailNovoLead({
                 nomeParceiro: input.nomeEmpresa,

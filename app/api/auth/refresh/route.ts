@@ -41,23 +41,21 @@ export async function POST(request: NextRequest) {
   const tokenHash = hashToken(refreshTokenRaw);
   const supabase  = getSupabase();
 
+  // ----------------------------------------------------------
+  // 3. Revogar atomicamente: o UPDATE só bate se o token ainda
+  //    estiver válido (revogado=false e não expirado). Se dois
+  //    requests chegarem juntos, apenas um ganha o UPDATE.
+  // ----------------------------------------------------------
   const { data: tokenRecord, error } = await supabase
     .from('refresh_tokens')
-    .select('id, inquilino_id, expires_at, revogado')
-    .eq('token_hash', tokenHash)        // busca pelo hash do token
+    .update({ revogado: true })
+    .eq('token_hash', tokenHash)
+    .eq('revogado', false)
+    .gt('expires_at', new Date().toISOString())
+    .select('id, inquilino_id, expires_at')
     .single();
 
-  // ----------------------------------------------------------
-  // 3. Validar: token deve existir, não estar revogado
-  //    e não estar expirado
-  // ----------------------------------------------------------
-  const tokenInvalido =
-    error ||
-    !tokenRecord ||
-    tokenRecord.revogado === true ||
-    new Date(tokenRecord.expires_at) < new Date();
-
-  if (tokenInvalido) {
+  if (error || !tokenRecord) {
     return respostaInvalida(request, 'Refresh token inválido ou expirado');
   }
 
@@ -75,17 +73,7 @@ export async function POST(request: NextRequest) {
   }
 
   // ----------------------------------------------------------
-  // 5. REVOGAR o token atual (rotação obrigatória)
-  //    Se alguém roubar o token antigo e tentar usar depois,
-  //    ele já estará revogado.
-  // ----------------------------------------------------------
-  await supabase
-    .from('refresh_tokens')
-    .update({ revogado: true })
-    .eq('id', tokenRecord.id);
-
-  // ----------------------------------------------------------
-  // 6. Gerar novo par de tokens
+  // 5. Gerar novo par de tokens
   // ----------------------------------------------------------
   const novoAccessToken  = await generateAccessToken({
     id:   inquilino.id,
@@ -95,7 +83,7 @@ export async function POST(request: NextRequest) {
   const novoRefreshTokenHash = hashToken(novoRefreshToken);
 
   // ----------------------------------------------------------
-  // 7. Salvar novo refresh token no banco
+  // 6. Salvar novo refresh token no banco
   // ----------------------------------------------------------
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
@@ -108,12 +96,12 @@ export async function POST(request: NextRequest) {
   });
 
   // ----------------------------------------------------------
-  // 8. Log de auditoria
+  // 7. Log de auditoria
   // ----------------------------------------------------------
   await logAudit('token_refresh', request, inquilino.id);
 
   // ----------------------------------------------------------
-  // 9. Resposta com novos cookies
+  // 8. Resposta com novos cookies
   // inquilinoId é incluído no body para que o middleware possa
   // injetar x-inquilino-id no request após o refresh silencioso.
   // O browser nunca vê este body diretamente — o middleware o consome.
