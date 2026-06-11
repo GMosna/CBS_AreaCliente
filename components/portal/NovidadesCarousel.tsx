@@ -15,9 +15,9 @@ export function NovidadesCarousel({ parceiros }: NovidadesCarouselProps) {
   return (
     <div className="relative w-screen left-1/2 -translate-x-1/2">
       {/* Gradiente fade esquerda */}
-      <div className="absolute left-0 top-0 w-24 h-full bg-gradient-to-r from-[#0d0d0d] to-transparent z-10 pointer-events-none" />
+      <div className="absolute left-0 top-0 w-24 h-full z-10 pointer-events-none" style={{ background: 'linear-gradient(to right, var(--color-bg), transparent)' }} />
       {/* Gradiente fade direita */}
-      <div className="absolute right-0 top-0 w-24 h-full bg-gradient-to-l from-[#0d0d0d] to-transparent z-10 pointer-events-none" />
+      <div className="absolute right-0 top-0 w-24 h-full z-10 pointer-events-none" style={{ background: 'linear-gradient(to left, var(--color-bg), transparent)' }} />
 
       <div className="overflow-hidden">
         <div className="novidades-track py-2">
