@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { ThemeToggle } from '@/components/portal/ThemeToggle';
+import { useTheme } from '@/hooks/useTheme';
 
 // ── Ícones inline ─────────────────────────────────────────────
 const LockIcon = () => (
@@ -168,22 +170,31 @@ export default function LoginPage() {
     }
   }
 
+  const { theme } = useTheme();
+
   const cpfValido       = cpf.replace(/\D/g, '').length === 11;
   const formPreenchido  = cpfValido && dataNascimento.length === 10;
   const captchaOk       = !captchaRequired || !!captchaToken;
   const hoje            = new Date().toISOString().split('T')[0];
 
+  const gridLine = theme === 'light' ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.025)';
+
   return (
     <main
-      className="min-h-screen bg-[#0d0d0d] flex items-center justify-center relative overflow-hidden px-4 py-12"
+      className="min-h-screen bg-[var(--color-bg)] flex items-center justify-center relative overflow-hidden px-4 py-12 transition-colors duration-300"
       style={{
         backgroundImage: `
-          linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)
+          linear-gradient(${gridLine} 1px, transparent 1px),
+          linear-gradient(90deg, ${gridLine} 1px, transparent 1px)
         `,
         backgroundSize: '44px 44px',
       }}
     >
+      {/* Botão de tema */}
+      <div className="absolute top-4 right-4 z-20">
+        <ThemeToggle />
+      </div>
+
       {/* Glow radial de fundo */}
       <div
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
@@ -211,17 +222,17 @@ export default function LoginPage() {
               className="drop-shadow-[0_0_16px_rgba(228,51,51,0.35)]"
             />
           </div>
-          <h1 className="font-display text-5xl tracking-[5px] text-white leading-none">
+          <h1 className="font-display text-5xl tracking-[5px] text-[var(--color-text)] leading-none">
             SASSI <span className="text-[#e43333]">IMÓVEIS</span>
           </h1>
-          <p className="text-[#9ca3af] text-[11px] tracking-[3px] mt-3 uppercase">
+          <p className="text-[var(--color-text-muted)] text-[11px] tracking-[3px] mt-3 uppercase">
             Clube de Benefícios · Área do Inquilino
           </p>
         </div>
 
         {/* ── Card ── */}
         <div
-          className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl p-8 opacity-0 animate-fade-up"
+          className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-8 opacity-0 animate-fade-up"
           style={{ animationDelay: '80ms', animationFillMode: 'forwards' }}
         >
           <form onSubmit={handleSubmit} noValidate>
@@ -229,7 +240,7 @@ export default function LoginPage() {
 
               {/* CPF */}
               <div className="space-y-2">
-                <label htmlFor="cpf" className="block text-sm font-medium text-[#9ca3af]">
+                <label htmlFor="cpf" className="block text-sm font-medium text-[var(--color-text-muted)]">
                   CPF
                 </label>
                 <div className="relative">
@@ -244,13 +255,13 @@ export default function LoginPage() {
                     aria-invalid={!!error}
                     aria-describedby={error ? 'login-error' : undefined}
                     className={[
-                      'w-full bg-[#222] border rounded-lg px-4 py-3 pr-11',
-                      'text-white placeholder-[#6b7280] text-base outline-none transition-colors',
+                      'w-full bg-[var(--color-surface-2)] border rounded-lg px-4 py-3 pr-11',
+                      'text-[var(--color-text)] placeholder-[var(--color-text-subtle)] text-base outline-none transition-colors',
                       'focus:border-[#e43333]',
-                      error ? 'border-[#e43333]' : 'border-[#2a2a2a]',
+                      error ? 'border-[#e43333]' : 'border-[var(--color-border)]',
                     ].join(' ')}
                   />
-                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#6b7280]">
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-subtle)]">
                     <LockIcon />
                   </span>
                 </div>
@@ -258,7 +269,7 @@ export default function LoginPage() {
 
               {/* Data de Nascimento */}
               <div className="space-y-2">
-                <label htmlFor="dataNascimento" className="block text-sm font-medium text-[#9ca3af]">
+                <label htmlFor="dataNascimento" className="block text-sm font-medium text-[var(--color-text-muted)]">
                   Data de Nascimento
                 </label>
                 <input
@@ -269,10 +280,11 @@ export default function LoginPage() {
                   max={hoje}
                   aria-invalid={!!error}
                   className={[
-                    'w-full bg-[#222] border rounded-lg px-4 py-3',
-                    'text-white text-base outline-none transition-colors [color-scheme:dark]',
+                    'w-full bg-[var(--color-surface-2)] border rounded-lg px-4 py-3',
+                    'text-[var(--color-text)] text-base outline-none transition-colors',
+                    theme === 'light' ? '[color-scheme:light]' : '[color-scheme:dark]',
                     'focus:border-[#e43333]',
-                    error ? 'border-[#e43333]' : 'border-[#2a2a2a]',
+                    error ? 'border-[#e43333]' : 'border-[var(--color-border)]',
                   ].join(' ')}
                 />
               </div>
@@ -280,7 +292,7 @@ export default function LoginPage() {
               {/* CAPTCHA Turnstile — aparece após 3 falhas */}
               {captchaRequired && (
                 <div className="space-y-2">
-                  <p className="text-xs text-[#9ca3af]">
+                  <p className="text-xs text-[var(--color-text-muted)]">
                     Confirme que você não é um robô para continuar.
                   </p>
                   <div ref={captchaRef} />
@@ -298,8 +310,8 @@ export default function LoginPage() {
                   <div>
                     <p className="text-sm text-[#e43333]">{error}</p>
                     {blockedUntil && (
-                      <p className="text-xs text-[#9ca3af] mt-1">
-                        Tente novamente em <strong className="text-white">{countdown}</strong>
+                      <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                        Tente novamente em <strong className="text-[var(--color-text)]">{countdown}</strong>
                       </p>
                     )}
                   </div>
@@ -344,7 +356,7 @@ export default function LoginPage() {
 
         {/* Rodapé */}
         <p
-          className="text-center text-[#6b7280] text-xs mt-6 opacity-0 animate-fade-up"
+          className="text-center text-[var(--color-text-subtle)] text-xs mt-6 opacity-0 animate-fade-up"
           style={{ animationDelay: '160ms', animationFillMode: 'forwards' }}
         >
           Apenas inquilinos cadastrados na Sassi Imóveis têm acesso
