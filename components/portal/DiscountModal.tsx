@@ -187,6 +187,7 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
   const [codigoVisivel, setCodigoVisivel] = useState(false);
   const [carregandoUso, setCarregandoUso] = useState(false);
   const [bloqueio, setBloqueio] = useState<BloqueioInfo | null>(null);
+  const [novoResgate, setNovoResgate] = useState(false);
 
   const sessionKey = `cupom_usado_${parceiro.id}`;
 
@@ -242,6 +243,7 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
       if (res.ok && data.sucesso) {
         sessionStorage.setItem(sessionKey, 'true');
         window.dispatchEvent(new CustomEvent('cupom-usado'));
+        setNovoResgate(true);
 
         if (modo === 'fisica') setCupomModalOpen(true);
         else setCodigoVisivel(true);
@@ -328,6 +330,15 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
     );
   }
 
+  function AvisoLgpd() {
+    if (!novoResgate) return null;
+    return (
+      <p className="text-[#6b7280] text-xs text-center mt-2 px-2 leading-relaxed">
+        ℹ️ Seu primeiro nome é compartilhado com <strong className="text-[#9ca3af]">{parceiro.nome_empresa}</strong> para facilitar seu atendimento.
+      </p>
+    );
+  }
+
   function BotaoCupomFisico() {
     return (
       <>
@@ -354,6 +365,7 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
             <>🎫 Ver cupom</>
           )}
         </button>
+        <AvisoLgpd />
         <BloqueioDisplay />
       </>
     );
@@ -378,6 +390,7 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
               </span>
               <p className="text-[#6b7280] text-xs mt-2">Cole este código no carrinho</p>
             </div>
+            <AvisoLgpd />
             <div className="flex flex-col gap-2">
               <button
                 onClick={copiarCodigo}

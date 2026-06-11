@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { logAudit } from '@/lib/audit';
 import { parseFrequencia, estaDisponivel } from '@/lib/frequencia-desconto';
+import { enviarEmailCupomResgatado } from '@/lib/email';
 import type { AuditAcao } from '@/types/auth';
 
 function getSupabase() {
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   // 1. Verificar se parceiro existe e está ativo
   const { data: parceiro } = await supabase
     .from('parceiros')
-    .select('id, tipo_loja, frequencia_desconto')
+    .select('id, nome_empresa, tipo_loja, frequencia_desconto, desconto_descricao, codigo_cupom, email, responsavel')
     .eq('id', parceiroId)
     .eq('ativo', true)
     .eq('aprovado', true)
@@ -64,16 +65,37 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   }
 
   // 3. Registrar uso
+  const dataResgate = new Date();
   await supabase.from('uso_descontos').insert({
     inquilino_id: inquilinoId,
     parceiro_id: parceiroId,
-    usado_em: new Date().toISOString(),
+    usado_em: dataResgate.toISOString(),
   });
 
   // 4. Audit log
   const acao: AuditAcao =
     parceiro.tipo_loja === 'online' ? 'copiou_codigo_online' : 'visualizou_cupom_fisico';
   await logAudit(acao, request, inquilinoId, { parceiro_id: parceiroId });
+
+  // 5. Notificar representante por e-mail (apenas loja física ou ambos)
+  //    Fire-and-forget: não bloqueia a resposta ao inquilino
+  if (parceiro.tipo_loja === 'fisica' || parceiro.tipo_loja === 'ambos') {
+    const { data: inquilino } = await supabase
+      .from('inquilinos')
+      .select('nome')
+      .eq('id', inquilinoId)
+      .single();
+
+    if (inquilino?.nome) {
+      enviarEmailCupomResgatado({
+        parceiro,
+        nomeInquilino: inquilino.nome,
+        dataResgate,
+      }).catch((err: unknown) =>
+        console.error('[email-cupom] Falha ao enviar:', (err as Error).message)
+      );
+    }
+  }
 
   return NextResponse.json(
     { sucesso: true },
