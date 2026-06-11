@@ -18,8 +18,16 @@ export type DisponibilidadeResult =
  * Exemplos aceitos: "Ilimitado", "Uso único", "1x por mês", "2 vezes por semana",
  * "Mensal", "Semanal", "Trimestral", "1x/semana", etc.
  */
+// Retorna true para frequências que eram "sem limite" — agora tratadas como 1/dia
+export function isIlimitado(texto: string | null | undefined): boolean {
+  if (!texto?.trim()) return true;
+  const t = texto.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+  return ['ilimitado', 'valido sempre', 'sem limite', 'livre'].includes(t);
+}
+
 export function parseFrequencia(texto: string | null | undefined): FrequenciaConfig {
-  if (!texto?.trim()) return { tipo: 'ilimitado' };
+  // Regra de negócio: "ilimitado" e ausência de frequência = 1 uso por dia
+  if (!texto?.trim()) return { tipo: 'periodo', diasJanela: 1, limiteUsos: 1 };
 
   // Normaliza: minúsculas + remove acentos
   const t = texto
@@ -28,8 +36,8 @@ export function parseFrequencia(texto: string | null | undefined): FrequenciaCon
     .replace(/[̀-ͯ]/g, '')
     .trim();
 
-  if (t.includes('ilimitado') || t.includes('sem limite')) {
-    return { tipo: 'ilimitado' };
+  if (t.includes('ilimitado') || t.includes('sem limite') || t.includes('valido sempre') || t === 'livre') {
+    return { tipo: 'periodo', diasJanela: 1, limiteUsos: 1 };
   }
 
   if (
@@ -72,7 +80,7 @@ export function parseFrequencia(texto: string | null | undefined): FrequenciaCon
     return { tipo: 'periodo', diasJanela: 365, limiteUsos: 1 };
   }
 
-  return { tipo: 'ilimitado' };
+  return { tipo: 'periodo', diasJanela: 1, limiteUsos: 1 };
 }
 
 function diasDoPeriodo(periodo: string): number {

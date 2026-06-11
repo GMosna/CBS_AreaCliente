@@ -25,7 +25,7 @@ export const PartnerCard = memo(function PartnerCard({ parceiro, mode = 'grid' }
       <article
         onClick={() => setModalOpen(true)}
         className={[
-          'group relative bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl flex flex-col h-full',
+          'group relative bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl flex flex-col h-full',
           'cursor-pointer transition-all duration-200',
           'hover:-translate-y-1 hover:border-[#e43333]/50',
           'hover:shadow-[0_8px_32px_rgba(228,51,51,0.15)]',
@@ -34,7 +34,7 @@ export const PartnerCard = memo(function PartnerCard({ parceiro, mode = 'grid' }
         aria-label={`Ver benefício: ${parceiro.nome_empresa}`}
       >
         {/* Área da logo */}
-        <div className="w-full h-40 bg-[#111] rounded-xl mb-4 overflow-hidden flex items-center justify-center">
+        <div className="w-full h-40 bg-[var(--color-surface-2)] rounded-xl mb-4 overflow-hidden flex items-center justify-center">
           {logoSrc && !logoError ? (
             <img
               src={logoSrc}
@@ -48,14 +48,14 @@ export const PartnerCard = memo(function PartnerCard({ parceiro, mode = 'grid' }
         </div>
 
         {/* Nome */}
-        <h3 className="font-semibold text-white text-sm text-center leading-snug mb-2 line-clamp-2">
+        <h3 className="font-semibold text-[var(--color-text)] text-sm text-center leading-snug mb-2 line-clamp-2">
           {parceiro.nome_empresa}
         </h3>
 
         {/* Badges segmento + destaque */}
         <div className="flex flex-wrap items-center justify-center gap-1 mb-3">
           {parceiro.segmento && (
-            <span className="text-[10px] font-medium uppercase tracking-wide text-[#9ca3af] bg-[#222] border border-[#2a2a2a] px-2 py-0.5 rounded-full">
+            <span className="text-[10px] font-medium uppercase tracking-wide text-[var(--color-text-muted)] bg-[var(--color-surface-2)] border border-[var(--color-border)] px-2 py-0.5 rounded-full">
               {parceiro.segmento}
             </span>
           )}
@@ -70,17 +70,17 @@ export const PartnerCard = memo(function PartnerCard({ parceiro, mode = 'grid' }
         <div className="flex-1" />
         <div className="flex justify-center mb-4">
           {parceiro.tipo_loja === 'fisica' && (
-            <span className="text-[10px] font-medium uppercase tracking-wide bg-[#1a1a1a] border border-[#3a3a3a] text-[#9ca3af] px-2 py-0.5 rounded-full">
+            <span className="text-[10px] font-medium uppercase tracking-wide bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] px-2 py-0.5 rounded-full">
               🏪 Física
             </span>
           )}
           {parceiro.tipo_loja === 'online' && (
-            <span className="text-[10px] font-medium uppercase tracking-wide bg-[#1a1a1a] border border-[#3b82f6]/30 text-[#3b82f6] px-2 py-0.5 rounded-full">
+            <span className="text-[10px] font-medium uppercase tracking-wide bg-[var(--color-surface)] border border-[#3b82f6]/30 text-[#3b82f6] px-2 py-0.5 rounded-full">
               💻 Online
             </span>
           )}
           {parceiro.tipo_loja === 'ambos' && (
-            <span className="text-[10px] font-medium uppercase tracking-wide bg-[#1a1a1a] border border-[#e43333]/30 text-[#e43333] px-2 py-0.5 rounded-full">
+            <span className="text-[10px] font-medium uppercase tracking-wide bg-[var(--color-surface)] border border-[#e43333]/30 text-[#e43333] px-2 py-0.5 rounded-full">
               🏪💻 Físico e Online
             </span>
           )}
@@ -113,15 +113,15 @@ export const PartnerCard = memo(function PartnerCard({ parceiro, mode = 'grid' }
 // ── Skeleton ──────────────────────────────────────────────────
 export function PartnerCardSkeleton() {
   return (
-    <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl p-4">
-      <div className="w-full h-40 bg-[#222] animate-shimmer rounded-xl mb-4" style={{ backgroundSize: '200% 100%' }} />
-      <div className="h-5 bg-[#222] animate-shimmer rounded w-3/4 mx-auto mb-2" style={{ backgroundSize: '200% 100%' }} />
-      <div className="h-3 bg-[#222] animate-shimmer rounded w-1/3 mx-auto mb-3" style={{ backgroundSize: '200% 100%' }} />
+    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
+      <div className="w-full h-40 bg-[var(--color-surface-2)] animate-shimmer rounded-xl mb-4" style={{ backgroundSize: '200% 100%' }} />
+      <div className="h-5 bg-[var(--color-surface-2)] animate-shimmer rounded w-3/4 mx-auto mb-2" style={{ backgroundSize: '200% 100%' }} />
+      <div className="h-3 bg-[var(--color-surface-2)] animate-shimmer rounded w-1/3 mx-auto mb-3" style={{ backgroundSize: '200% 100%' }} />
       <div className="space-y-1.5 mb-3">
-        <div className="h-3 bg-[#222] animate-shimmer rounded" style={{ backgroundSize: '200% 100%' }} />
-        <div className="h-3 w-4/5 bg-[#222] animate-shimmer rounded mx-auto" style={{ backgroundSize: '200% 100%' }} />
+        <div className="h-3 bg-[var(--color-surface-2)] animate-shimmer rounded" style={{ backgroundSize: '200% 100%' }} />
+        <div className="h-3 w-4/5 bg-[var(--color-surface-2)] animate-shimmer rounded mx-auto" style={{ backgroundSize: '200% 100%' }} />
       </div>
-      <div className="h-9 bg-[#222] animate-shimmer rounded-lg" style={{ backgroundSize: '200% 100%' }} />
+      <div className="h-9 bg-[var(--color-surface-2)] animate-shimmer rounded-lg" style={{ backgroundSize: '200% 100%' }} />
     </div>
   );
 }

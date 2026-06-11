@@ -33,12 +33,8 @@ export default async function DashboardPage() {
 
   const inquilino = inquilinoRes.data;
 
-  const agora     = new Date();
-  const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
-
   const totalParceiros = parceiros.length;
   const segmentos      = new Set(parceiros.map((p) => p.segmento).filter(Boolean)).size;
-  const novosEsteMes   = parceiros.filter((p) => new Date(p.created_at) >= inicioMes).length;
   const destaques      = parceiros.filter((p) => p.destaque).slice(0, 4);
   const novidades      = [...parceiros]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
@@ -46,8 +42,7 @@ export default async function DashboardPage() {
 
   const metricas = [
     { valor: totalParceiros, desc: 'empresas ativas', label: 'Parceiros' },
-    { valor: novosEsteMes,   desc: 'este mês',         label: 'Novos'     },
-    { valor: segmentos,      desc: 'categorias',        label: 'Segmentos' },
+    { valor: segmentos,      desc: 'categorias',       label: 'Segmentos' },
   ];
 
   const primeiroNome = inquilino?.nome?.trim().split(' ')[0]?.trim() || 'Inquilino';
@@ -56,14 +51,14 @@ export default async function DashboardPage() {
     <div className="space-y-8">
 
       {/* Boas-vindas */}
-      <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl p-6 flex items-center justify-between gap-4">
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-6 flex items-center justify-between gap-4">
         <div>
-          <p className="text-[#9ca3af] text-sm mb-1">Bem-vindo de volta</p>
-          <h1 className="font-display text-4xl md:text-5xl tracking-wider text-white leading-none">
+          <p className="text-[var(--color-text-muted)] text-sm mb-1">Bem-vindo de volta</p>
+          <h1 className="font-display text-4xl md:text-5xl tracking-wider text-[var(--color-text)] leading-none">
             OLÁ, <span className="text-[#e43333]">{primeiroNome.toUpperCase()}</span>
           </h1>
           {inquilino?.imovel_referencia && (
-            <div className="flex items-center gap-2 mt-3 text-[#9ca3af] text-sm">
+            <div className="flex items-center gap-2 mt-3 text-[var(--color-text-muted)] text-sm">
               <svg className="w-3.5 h-3.5 text-[#e43333] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
               </svg>
@@ -79,13 +74,12 @@ export default async function DashboardPage() {
       </div>
 
       {/* Métricas */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* 3 métricas genéricas */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {metricas.map((m) => (
-          <div key={m.label} className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-5">
-            <p className="text-[#9ca3af] text-xs uppercase tracking-widest mb-2">{m.desc}</p>
-            <p className="font-display text-5xl text-white tracking-wide leading-none">{m.valor}</p>
-            <p className="text-[#6b7280] text-sm mt-2">{m.label}</p>
+          <div key={m.label} className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5">
+            <p className="text-[var(--color-text-muted)] text-xs uppercase tracking-widest mb-2">{m.desc}</p>
+            <p className="font-display text-5xl text-[var(--color-text)] tracking-wide leading-none">{m.valor}</p>
+            <p className="text-[var(--color-text-subtle)] text-sm mt-2">{m.label}</p>
           </div>
         ))}
 
@@ -96,7 +90,7 @@ export default async function DashboardPage() {
       {/* Destaques */}
       {destaques.length > 0 && (
         <section>
-          <h2 className="font-display text-2xl tracking-wider text-white mb-4">
+          <h2 className="font-display text-2xl tracking-wider text-[var(--color-text)] mb-4">
             PARCEIROS EM <span className="text-[#e43333]">DESTAQUE</span>
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -108,7 +102,7 @@ export default async function DashboardPage() {
       {/* Novidades — carrossel automático */}
       {novidades.length > 0 && (
         <section>
-          <h2 className="font-display text-2xl tracking-wider text-white mb-4">
+          <h2 className="font-display text-2xl tracking-wider text-[var(--color-text)] mb-4">
             NOVIDADES
           </h2>
           <NovidadesCarousel parceiros={novidades} />
@@ -132,7 +126,7 @@ export default async function DashboardPage() {
 
       {totalParceiros === 0 && (
         <div className="text-center py-20 text-[#6b7280]">
-          <p className="font-display text-3xl tracking-wider mb-2 text-white">EM BREVE</p>
+          <p className="font-display text-3xl tracking-wider mb-2 text-[var(--color-text)]">EM BREVE</p>
           <p className="text-sm">Os parceiros serão disponibilizados em breve.</p>
         </div>
       )}

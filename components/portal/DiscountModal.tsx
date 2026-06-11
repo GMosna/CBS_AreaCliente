@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useScrollLock } from '@/hooks/useScrollLock';
+import { isIlimitado } from '@/lib/frequencia-desconto';
 import type { ParceiroListItem } from '@/types/parceiro';
 import { buildWhatsAppUrl } from '@/utils/whatsapp';
 import { resolveLogoUrl } from '@/utils/logo';
@@ -189,19 +190,21 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
   const [bloqueio, setBloqueio] = useState<BloqueioInfo | null>(null);
   const [novoResgate, setNovoResgate] = useState(false);
 
-  const sessionKey = `cupom_usado_${parceiro.id}`;
-
   const temCupom = Boolean(parceiro.codigo_cupom?.trim());
   const tipoLoja = parceiro.tipo_loja ?? (temCupom ? 'fisica' : null);
 
-  // Restaurar estado da sessão ao abrir o modal
+  // Resetar todo o estado ao fechar o modal
   useEffect(() => {
-    if (!open) return;
-    setBloqueio(null);
-    if (typeof window !== 'undefined' && sessionStorage.getItem(sessionKey)) {
-      setCodigoVisivel(true);
+    if (open) {
+      setBloqueio(null);
+    } else {
+      setCodigoVisivel(false);
+      setCarregandoUso(false);
+      setBloqueio(null);
+      setNovoResgate(false);
+      setCupomModalOpen(false);
     }
-  }, [open, sessionKey]);
+  }, [open]);
 
   // Audit de visualização
   useEffect(() => {
@@ -223,13 +226,6 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
   async function handleVerCupom(modo: 'fisica' | 'online') {
     if (carregandoUso) return;
 
-    // Já usado nesta sessão — abrir sem registrar novo uso
-    if (typeof window !== 'undefined' && sessionStorage.getItem(sessionKey)) {
-      if (modo === 'fisica') setCupomModalOpen(true);
-      else setCodigoVisivel(true);
-      return;
-    }
-
     setCarregandoUso(true);
     setBloqueio(null);
 
@@ -241,7 +237,6 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
       const data = await res.json();
 
       if (res.ok && data.sucesso) {
-        sessionStorage.setItem(sessionKey, 'true');
         window.dispatchEvent(new CustomEvent('cupom-usado'));
         setNovoResgate(true);
 
@@ -342,31 +337,34 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
   function BotaoCupomFisico() {
     return (
       <>
-        <button
-          onClick={() => handleVerCupom('fisica')}
-          disabled={carregandoUso}
-          className={[
-            'w-full py-3 px-4 rounded-xl font-semibold text-sm',
-            'flex items-center justify-center gap-2 transition-all duration-200',
-            carregandoUso
-              ? 'bg-[#e43333]/50 text-white cursor-not-allowed'
-              : 'bg-[#e43333] hover:bg-[#981c1c] text-white',
-          ].join(' ')}
-        >
-          {carregandoUso ? (
-            <>
-              <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-              Verificando...
-            </>
-          ) : (
-            <>🎫 Ver cupom</>
-          )}
-        </button>
+        {!bloqueio ? (
+          <button
+            onClick={() => handleVerCupom('fisica')}
+            disabled={carregandoUso}
+            className={[
+              'w-full py-3 px-4 rounded-xl font-semibold text-sm',
+              'flex items-center justify-center gap-2 transition-all duration-200',
+              carregandoUso
+                ? 'bg-[#e43333]/50 text-white cursor-not-allowed'
+                : 'bg-[#e43333] hover:bg-[#981c1c] text-white',
+            ].join(' ')}
+          >
+            {carregandoUso ? (
+              <>
+                <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Verificando...
+              </>
+            ) : (
+              <>🎫 Ver cupom</>
+            )}
+          </button>
+        ) : (
+          <BloqueioDisplay />
+        )}
         <AvisoLgpd />
-        <BloqueioDisplay />
       </>
     );
   }
@@ -374,21 +372,21 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
   function SecaoOnline() {
     return (
       <div className="mb-4">
-        <p className="text-[#9ca3af] text-xs uppercase tracking-widest mb-2 font-medium">
+        <p className="text-[var(--color-text-muted)] text-xs uppercase tracking-widest mb-2 font-medium">
           Código online
         </p>
 
         {codigoVisivel ? (
           // Código revelado
           <>
-            <div className="bg-[#111] border border-[#e43333]/40 rounded-xl p-4 text-center mb-3">
+            <div className="bg-[var(--color-surface-2)] border border-[#e43333]/40 rounded-xl p-4 text-center mb-3">
               <span
-                className="text-white text-3xl font-bold tracking-widest select-all"
+                className="text-[var(--color-text)] text-3xl font-bold tracking-widest select-all"
                 style={{ fontFamily: 'monospace' }}
               >
                 {parceiro.codigo_cupom}
               </span>
-              <p className="text-[#6b7280] text-xs mt-2">Cole este código no carrinho</p>
+              <p className="text-[var(--color-text-subtle)] text-xs mt-2">Cole este código no carrinho</p>
             </div>
             <AvisoLgpd />
             <div className="flex flex-col gap-2">
@@ -431,15 +429,15 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
           </>
         ) : (
           // Código oculto
-          <>
-            <div className="relative mb-3">
-              <div className="bg-[#111] border border-dashed border-[#333] rounded-xl p-4 text-center blur-sm select-none pointer-events-none">
-                <span className="text-white text-3xl font-bold tracking-widest" style={{ fontFamily: 'monospace' }}>
-                  {parceiro.codigo_cupom}
-                </span>
-                <p className="text-[#6b7280] text-xs mt-2">Cole este código no carrinho</p>
-              </div>
-              <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-[#0d0d0d]/60">
+          <div className="relative mb-3">
+            <div className="bg-[var(--color-surface-2)] border border-dashed border-[#333] rounded-xl p-4 text-center blur-sm select-none pointer-events-none">
+              <span className="text-[var(--color-text)] text-3xl font-bold tracking-widest" style={{ fontFamily: 'monospace' }}>
+                {parceiro.codigo_cupom}
+              </span>
+              <p className="text-[var(--color-text-subtle)] text-xs mt-2">Cole este código no carrinho</p>
+            </div>
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-xl bg-[#0d0d0d]/70">
+              {!bloqueio ? (
                 <button
                   onClick={() => handleVerCupom('online')}
                   disabled={carregandoUso}
@@ -452,10 +450,18 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
                 >
                   {carregandoUso ? '⏳ Verificando...' : '👁 Ver cupom'}
                 </button>
-              </div>
+              ) : (
+                <div className="text-center p-4 border border-[#981c1c]/40 rounded-xl bg-[#981c1c]/10 mx-4">
+                  <p className="text-[#e43333] font-medium text-sm">🔒 {bloqueio.mensagem}</p>
+                  {bloqueio.proximoUsoEm && (
+                    <p className="text-[#6b7280] text-xs mt-1">
+                      Disponível em: {formatarData(bloqueio.proximoUsoEm)}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
-            <BloqueioDisplay />
-          </>
+          </div>
         )}
       </div>
     );
@@ -488,14 +494,14 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
 
         <div
           className={[
-            'relative z-10 w-full bg-[#1a1a1a] border-t border-[#2a2a2a]',
+            'relative z-10 w-full bg-[var(--color-surface)] border-t border-[var(--color-border)]',
             'rounded-t-3xl md:rounded-2xl md:border md:max-w-lg md:mx-4',
             'max-h-[90vh] overflow-y-auto',
             'animate-slide-up md:animate-scale-in',
           ].join(' ')}
         >
           <div className="flex justify-center pt-3 pb-1 md:hidden">
-            <div className="w-10 h-1 bg-[#2a2a2a] rounded-full" />
+            <div className="w-10 h-1 bg-[var(--color-border)] rounded-full" />
           </div>
 
           <div className="p-6 md:p-8">
@@ -514,11 +520,11 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
                   )}
                 </div>
                 <div>
-                  <h2 className="font-display text-2xl tracking-wide text-white leading-tight">
+                  <h2 className="font-display text-2xl tracking-wide text-[var(--color-text)] leading-tight">
                     {parceiro.nome_empresa.toUpperCase()}
                   </h2>
                   {parceiro.segmento && (
-                    <span className="inline-block mt-1 text-xs font-medium uppercase tracking-wide text-[#9ca3af] bg-[#222] border border-[#2a2a2a] px-2.5 py-0.5 rounded-full">
+                    <span className="inline-block mt-1 text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)] bg-[var(--color-surface-2)] border border-[var(--color-border)] px-2.5 py-0.5 rounded-full">
                       {parceiro.segmento}
                     </span>
                   )}
@@ -526,7 +532,7 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
               </div>
               <button
                 onClick={onClose}
-                className="p-2 rounded-lg text-[#6b7280] hover:text-white hover:bg-[#222] transition-colors shrink-0"
+                className="p-2 rounded-lg text-[var(--color-text-subtle)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-2)] transition-colors shrink-0"
                 aria-label="Fechar"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -537,13 +543,13 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
 
             {/* Box de benefício */}
             <div className="bg-[#981c1c]/15 border border-[#e43333]/30 rounded-2xl p-5 mb-6">
-              <p className="text-[#9ca3af] text-xs uppercase tracking-widest mb-2 font-medium">
+              <p className="text-[var(--color-text-muted)] text-xs uppercase tracking-widest mb-2 font-medium">
                 Seu Benefício
               </p>
-              <p className="text-white text-base leading-relaxed font-medium selectable">
+              <p className="text-[var(--color-text)] text-base leading-relaxed font-medium selectable">
                 {parceiro.desconto_descricao}
               </p>
-              <p className="text-[#9ca3af] text-sm mt-3 flex items-center gap-1.5">
+              <p className="text-[var(--color-text-muted)] text-sm mt-3 flex items-center gap-1.5">
                 <svg className="w-3.5 h-3.5 text-[#e43333] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
                   <line x1="16" y1="2" x2="16" y2="6"/>
@@ -552,6 +558,12 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
                 </svg>
                 {parceiro.frequencia_desconto ?? 'Consultar parceiro'}
               </p>
+              {isIlimitado(parceiro.frequencia_desconto) && (
+                <p className="flex items-start gap-1.5 text-xs text-[var(--color-text-subtle)] mt-2">
+                  <span className="text-[#e43333] shrink-0 mt-0.5">ℹ</span>
+                  <span>Uso livre — limitado a <strong className="text-[var(--color-text-muted)]">1 resgate por dia</strong> por cliente.</span>
+                </p>
+              )}
             </div>
 
             {/* Ações por tipo_loja */}
@@ -559,7 +571,7 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
 
               {!temCupom && (
                 <>
-                  <p className="text-center text-[#9ca3af] text-sm">
+                  <p className="text-center text-[var(--color-text-muted)] text-sm">
                     Apresente este benefício na loja
                   </p>
                   <BotaoWhatsApp />
@@ -582,14 +594,14 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
 
               {temCupom && tipoLoja === 'ambos' && (
                 <>
-                  <div className="border border-[#2a2a2a] rounded-xl p-4 mb-1">
-                    <p className="text-[#9ca3af] text-xs uppercase tracking-widest mb-3 font-medium flex items-center gap-1.5">
+                  <div className="border border-[var(--color-border)] rounded-xl p-4 mb-1">
+                    <p className="text-[var(--color-text-muted)] text-xs uppercase tracking-widest mb-3 font-medium flex items-center gap-1.5">
                       🏪 Loja Física
                     </p>
                     <BotaoCupomFisico />
                   </div>
-                  <div className="border border-[#2a2a2a] rounded-xl p-4">
-                    <p className="text-[#9ca3af] text-xs uppercase tracking-widest mb-3 font-medium flex items-center gap-1.5">
+                  <div className="border border-[var(--color-border)] rounded-xl p-4">
+                    <p className="text-[var(--color-text-muted)] text-xs uppercase tracking-widest mb-3 font-medium flex items-center gap-1.5">
                       💻 Loja Online
                     </p>
                     <SecaoOnline />
@@ -600,7 +612,7 @@ export function DiscountModal({ parceiro, open, onClose }: DiscountModalProps) {
 
               <button
                 onClick={onClose}
-                className="w-full py-3 px-4 rounded-xl text-sm text-[#6b7280] hover:text-white transition-colors"
+                className="w-full py-3 px-4 rounded-xl text-sm text-[var(--color-text-subtle)] hover:text-[var(--color-text)] transition-colors"
               >
                 Fechar
               </button>
