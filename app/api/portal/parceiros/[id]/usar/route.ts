@@ -42,13 +42,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
   // 2. Verificar disponibilidade (buscar usos existentes)
   if (config.tipo !== 'ilimitado') {
-    const query = supabase
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 370);
+
+    const { data: usosExistentes } = await supabase
       .from('uso_descontos')
       .select('usado_em')
       .eq('inquilino_id', inquilinoId)
-      .eq('parceiro_id', parceiroId);
-
-    const { data: usosExistentes } = await query;
+      .eq('parceiro_id', parceiroId)
+      .gte('usado_em', cutoff.toISOString());
     const timestamps = (usosExistentes ?? []).map((u: { usado_em: string }) => u.usado_em);
 
     const check = estaDisponivel(config, timestamps);

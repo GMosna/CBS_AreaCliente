@@ -5,7 +5,7 @@ import { PartnerCard } from '@/components/portal/PartnerCard';
 import { NovidadesCarousel } from '@/components/portal/NovidadesCarousel';
 import { BeneficiosCard } from '@/components/portal/BeneficiosCard';
 import { contarBeneficiosDisponiveis } from '@/lib/dashboard';
-import type { ParceiroListItem } from '@/types/parceiro';
+import { getParceirosAtivos } from '@/lib/parceiros-cache';
 
 function getSupabase() {
   return createClient(
@@ -20,24 +20,18 @@ export default async function DashboardPage() {
 
   const supabase = getSupabase();
 
-  const [inquilinoRes, parceirosRes, beneficiosDisponiveis] = await Promise.all([
+  // parceiros vêm do cache (60s) — sem hit ao banco na maioria dos requests
+  const [inquilinoRes, parceiros, beneficiosDisponiveis] = await Promise.all([
     supabase
       .from('inquilinos')
       .select('nome, imovel_referencia')
       .eq('id', inquilinoId)
       .single(),
-    supabase
-      .from('parceiros')
-      .select('id, nome_empresa, segmento, desconto_descricao, frequencia_desconto, logo_url, destaque, whatsapp, tipo_loja, codigo_cupom, url_loja, created_at')
-      .eq('ativo', true)
-      .eq('aprovado', true)
-      .order('destaque', { ascending: false })
-      .order('nome_empresa'),
+    getParceirosAtivos(),
     contarBeneficiosDisponiveis(inquilinoId),
   ]);
 
   const inquilino = inquilinoRes.data;
-  const parceiros = (parceirosRes.data ?? []) as ParceiroListItem[];
 
   const agora     = new Date();
   const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);

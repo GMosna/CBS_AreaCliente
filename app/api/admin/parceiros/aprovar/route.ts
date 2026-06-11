@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
+import { revalidateTag } from 'next/cache';
 import { criarNotificacaoGlobal } from '@/lib/notificacoes';
 
 function esc(s: string): string {
@@ -119,6 +120,9 @@ export async function GET(request: NextRequest) {
       false
     );
   }
+
+  // Invalidar cache de parceiros para que o novo parceiro apareça imediatamente
+  revalidateTag('parceiros');
 
   // Notificar inquilinos (fire and forget — nunca bloqueia a resposta)
   criarNotificacaoGlobal({

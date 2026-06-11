@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { parseFrequencia, estaDisponivel } from './frequencia-desconto';
+import { getParceirosAtivos } from './parceiros-cache';
 
 function getSupabase() {
   return createClient(
@@ -8,33 +9,29 @@ function getSupabase() {
   );
 }
 
-/**
- * Retorna quantos parceiros o inquilino ainda pode resgatar,
- * respeitando a frequência de uso de cada um.
- * Usa 2 queries em vez de N+1.
- */
+// Janela máxima de frequência suportada (anual + margem).
+// Limitar a busca de uso_descontos a este período evita trazer todo o histórico.
+const JANELA_MAX_DIAS = 370;
+
 export async function contarBeneficiosDisponiveis(inquilinoId: string): Promise<number> {
-  const supabase = getSupabase();
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - JANELA_MAX_DIAS);
 
-  // 1. Todos os parceiros ativos e aprovados
-  const { data: parceiros } = await supabase
-    .from('parceiros')
-    .select('id, frequencia_desconto')
-    .eq('ativo', true)
-    .eq('aprovado', true);
+  const [parceiros, usosResult] = await Promise.all([
+    // Parceiros vêm do cache — sem query ao banco na maioria das chamadas
+    getParceirosAtivos(),
+    getSupabase()
+      .from('uso_descontos')
+      .select('parceiro_id, usado_em')
+      .eq('inquilino_id', inquilinoId)
+      .gte('usado_em', cutoff.toISOString())
+      .order('usado_em', { ascending: false }),
+  ]);
 
-  if (!parceiros || parceiros.length === 0) return 0;
+  if (!parceiros.length) return 0;
 
-  // 2. Todos os usos do inquilino de uma vez (sem filtro de data — estaDisponivel filtra)
-  const { data: usos } = await supabase
-    .from('uso_descontos')
-    .select('parceiro_id, usado_em')
-    .eq('inquilino_id', inquilinoId)
-    .order('usado_em', { ascending: false });
-
-  // Agrupar timestamps por parceiro
   const usosPorParceiro = new Map<string, string[]>();
-  for (const uso of (usos ?? [])) {
+  for (const uso of (usosResult.data ?? [])) {
     const lista = usosPorParceiro.get(uso.parceiro_id) ?? [];
     lista.push(uso.usado_em);
     usosPorParceiro.set(uso.parceiro_id, lista);
@@ -44,8 +41,7 @@ export async function contarBeneficiosDisponiveis(inquilinoId: string): Promise<
   for (const parceiro of parceiros) {
     const config = parseFrequencia(parceiro.frequencia_desconto);
     const timestamps = usosPorParceiro.get(parceiro.id) ?? [];
-    const result = estaDisponivel(config, timestamps);
-    if (result.disponivel) disponiveis++;
+    if (estaDisponivel(config, timestamps).disponivel) disponiveis++;
   }
 
   return disponiveis;

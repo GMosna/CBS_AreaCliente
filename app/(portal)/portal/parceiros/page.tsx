@@ -1,29 +1,12 @@
 import { headers } from 'next/headers';
-import { createClient } from '@supabase/supabase-js';
-import type { ParceiroListItem } from '@/types/parceiro';
+import { getParceirosAtivos } from '@/lib/parceiros-cache';
 import { ParceirosClient } from './ParceirosClient';
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
 
 export default async function ParceirosPage() {
   const inquilinoId = (await headers()).get('x-inquilino-id');
   if (!inquilinoId) return null;
 
-  const supabase = getSupabase();
-  const { data } = await supabase
-    .from('parceiros')
-    .select('id, nome_empresa, segmento, desconto_descricao, frequencia_desconto, logo_url, destaque, whatsapp, tipo_loja, codigo_cupom, url_loja, created_at')
-    .eq('ativo', true)
-    .eq('aprovado', true)
-    .order('destaque', { ascending: false })
-    .order('nome_empresa');
-
-  const parceiros = (data ?? []) as ParceiroListItem[];
+  const parceiros = await getParceirosAtivos();
   const segmentos = [...new Set(parceiros.map((p) => p.segmento).filter(Boolean))] as string[];
 
   return (
