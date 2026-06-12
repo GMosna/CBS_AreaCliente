@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
 
@@ -24,11 +24,12 @@ export const metadata: Metadata = {
   title: 'Sassi Imóveis — Área do Inquilino',
   description: 'Portal exclusivo de benefícios para inquilinos Sassi Imóveis.',
   robots: { index: false, follow: false },
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    viewportFit: 'cover', // respeita notch e home bar do iPhone
-  },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
