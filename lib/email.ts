@@ -243,6 +243,7 @@ function buildCupomResgatadoHtml(
   codigoCupom: string | null,
   dataFormatada: string,
   horaFormatada: string,
+  numeroProtocolo: string,
 ): string {
   const rep     = escHtml(nomeRepresentante);
   const empresa = escHtml(nomeEmpresa);
@@ -250,6 +251,7 @@ function buildCupomResgatadoHtml(
   const inicial = escHtml(inicialSobrenome);
   const ben     = escHtml(beneficio);
   const codigo  = codigoCupom ? escHtml(codigoCupom) : null;
+  const proto   = escHtml(numeroProtocolo);
 
   const codigoHtml = codigo
     ? `<tr>
@@ -293,7 +295,7 @@ function buildCupomResgatadoHtml(
             <tr><td style="padding:16px 20px;">
               <table width="100%" cellpadding="0" cellspacing="4">
                 <tr>
-                  <td style="padding:7px 0;color:#6b7280;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;width:120px;">Cliente</td>
+                  <td style="padding:7px 0;color:#6b7280;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;width:130px;">Cliente</td>
                   <td style="padding:7px 0;color:#1a1a1a;font-size:14px;font-weight:500;border-bottom:1px solid #e5e5e5;">${cliente} ${inicial}</td>
                 </tr>
                 <tr>
@@ -301,12 +303,12 @@ function buildCupomResgatadoHtml(
                   <td style="padding:7px 0;color:#1a1a1a;font-size:14px;font-weight:500;border-bottom:1px solid #e5e5e5;">${ben}</td>
                 </tr>
                 <tr>
-                  <td style="padding:7px 0;color:#6b7280;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Data</td>
-                  <td style="padding:7px 0;color:#1a1a1a;font-size:14px;font-weight:500;border-bottom:1px solid #e5e5e5;">${dataFormatada}</td>
+                  <td style="padding:7px 0;color:#6b7280;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Resgatado em</td>
+                  <td style="padding:7px 0;color:#1a1a1a;font-size:14px;font-weight:500;border-bottom:1px solid #e5e5e5;">${dataFormatada} às ${horaFormatada}</td>
                 </tr>
                 <tr>
-                  <td style="padding:7px 0;color:#6b7280;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Hora</td>
-                  <td style="padding:7px 0;color:#1a1a1a;font-size:14px;font-weight:500;">${horaFormatada}</td>
+                  <td style="padding:7px 0;color:#6b7280;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Protocolo</td>
+                  <td style="padding:7px 0;color:#1a1a1a;font-size:14px;font-weight:700;font-family:monospace;">#${proto}</td>
                 </tr>
               </table>
             </td></tr>
@@ -314,17 +316,6 @@ function buildCupomResgatadoHtml(
         </td></tr>
 
         ${codigoHtml}
-
-        <!-- Aviso -->
-        <tr><td style="padding:0 32px 24px;">
-          <table width="100%" cellpadding="0" cellspacing="0" style="background:#fef9ec;border:1px solid #fcd34d;border-radius:8px;">
-            <tr><td style="padding:14px 16px;">
-              <p style="margin:0;color:#92400e;font-size:13px;line-height:1.6;">
-                ⚠️ <strong>Fique atento!</strong> Certifique-se de que sua equipe está ciente do benefício para atender bem este cliente.
-              </p>
-            </td></tr>
-          </table>
-        </td></tr>
 
         <!-- Footer -->
         <tr><td style="padding:20px 32px;background:#f8f8f8;border-top:1px solid #e5e5e5;text-align:center;">
@@ -351,6 +342,7 @@ export async function enviarEmailCupomResgatado({
   parceiro,
   nomeInquilino,
   dataResgate,
+  numeroProtocolo,
 }: {
   parceiro: {
     nome_empresa: string;
@@ -361,6 +353,7 @@ export async function enviarEmailCupomResgatado({
   };
   nomeInquilino: string;
   dataResgate: Date;
+  numeroProtocolo: string;
 }): Promise<void> {
   const user = process.env.GMAIL_USER;
   const pass = process.env.GMAIL_APP_PASSWORD;
@@ -397,6 +390,7 @@ export async function enviarEmailCupomResgatado({
     parceiro.codigo_cupom,
     dataFormatada,
     horaFormatada,
+    numeroProtocolo,
   );
 
   try {
@@ -409,5 +403,170 @@ export async function enviarEmailCupomResgatado({
     console.log(`[email-cupom] Notificação enviada para ${parceiro.email} (${parceiro.nome_empresa})`);
   } catch (err) {
     console.error('[email-cupom] Falha ao enviar:', (err as Error).message);
+  }
+}
+
+// ============================================================
+// E-MAIL PARA INQUILINO — Cupom resgatado (protocolo + código)
+// ============================================================
+
+function buildCupomInquilinoHtml(
+  primeiroNomeInquilino: string,
+  nomeParceiro: string,
+  beneficio: string,
+  codigoCupom: string | null,
+  endereco: string | null,
+  numeroProtocolo: string,
+  dataHoraFormatada: string,
+): string {
+  const nome    = escHtml(primeiroNomeInquilino);
+  const empresa = escHtml(nomeParceiro);
+  const ben     = escHtml(beneficio);
+  const proto   = escHtml(numeroProtocolo);
+  const dthr    = escHtml(dataHoraFormatada);
+  const end     = endereco ? escHtml(endereco) : null;
+
+  const codigoHtml = codigoCupom
+    ? `<div style="border-radius:12px;overflow:hidden;margin:20px 0;">
+         <div style="background:#e43333;padding:8px;text-align:center;">
+           <p style="margin:0;color:#fff;font-size:11px;letter-spacing:3px;font-weight:700;text-transform:uppercase;">CÓDIGO DO CUPOM</p>
+         </div>
+         <div style="background:#981c1c;padding:20px;text-align:center;">
+           <p style="margin:0;color:#ffffff;font-family:monospace;font-size:28px;font-weight:900;letter-spacing:8px;">${escHtml(codigoCupom)}</p>
+         </div>
+       </div>`
+    : '';
+
+  const enderecoHtml = end
+    ? `<br/>📌 ${end}`
+    : '';
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+</head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:system-ui,-apple-system,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="100%" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e5e5e5;">
+
+        <!-- Header -->
+        <tr><td style="background:#0d0d0d;padding:28px;text-align:center;">
+          <p style="margin:0;color:#e43333;font-size:42px;font-weight:900;line-height:1;">S</p>
+          <p style="margin:6px 0 0;color:#9ca3af;font-size:11px;letter-spacing:3px;text-transform:uppercase;">CLUBE DE BENEFÍCIOS · SASSI IMÓVEIS</p>
+        </td></tr>
+
+        <!-- Body -->
+        <tr><td style="padding:32px;">
+          <p style="font-size:16px;color:#374151;margin:0 0 4px;">
+            Olá, <strong>${nome}</strong>! Aqui está seu cupom. 🎉
+          </p>
+          <p style="color:#374151;font-size:15px;margin:4px 0 20px;">
+            <strong>${empresa}</strong>
+          </p>
+
+          <!-- Benefício -->
+          <div style="background:#fff5f5;border-left:4px solid #e43333;border-radius:8px;padding:16px;margin:0 0 20px;text-align:center;">
+            <p style="margin:0;color:#e43333;font-size:16px;font-weight:700;">${ben}</p>
+          </div>
+
+          ${codigoHtml}
+
+          <!-- Protocolo -->
+          <div style="border:1px solid #e5e5e5;border-radius:10px;padding:16px;margin:0 0 20px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td>
+                  <p style="margin:0;color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Protocolo de resgate</p>
+                  <p style="margin:4px 0 0;color:#1a1a1a;font-weight:700;font-family:monospace;font-size:22px;">#${proto}</p>
+                </td>
+                <td style="text-align:right;">
+                  <p style="margin:0;color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Resgatado em</p>
+                  <p style="margin:4px 0 0;color:#1a1a1a;font-size:13px;font-weight:500;">${dthr}</p>
+                </td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Instrução -->
+          <div style="background:#f8f8f8;border-radius:8px;padding:14px;text-align:center;margin:0 0 20px;">
+            <p style="margin:0;color:#374151;font-size:13px;line-height:1.6;">
+              📍 Apresente este email ou o número do protocolo<br/>
+              ao atendente da loja <strong>${empresa}</strong>${enderecoHtml}
+            </p>
+          </div>
+        </td></tr>
+
+        <!-- Footer -->
+        <tr><td style="padding:20px;background:#f8f8f8;border-top:1px solid #e5e5e5;text-align:center;">
+          <p style="margin:0 0 3px;color:#374151;font-size:12px;font-weight:700;">
+            <span style="color:#e43333;">Sassi Imóveis</span> · Clube de Benefícios
+          </p>
+          <p style="margin:3px 0 0;color:#9ca3af;font-size:11px;">Limeira/SP · 44 anos de mercado</p>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+export async function enviarEmailCupomInquilino({
+  nomeInquilino,
+  emailInquilino,
+  parceiro,
+  numeroProtocolo,
+  geradoEm,
+}: {
+  nomeInquilino: string;
+  emailInquilino: string;
+  parceiro: {
+    nome_empresa: string;
+    desconto_descricao: string;
+    codigo_cupom: string | null;
+    endereco: string | null;
+  };
+  numeroProtocolo: string;
+  geradoEm: Date;
+}): Promise<void> {
+  const user = process.env.GMAIL_USER;
+  const pass = process.env.GMAIL_APP_PASSWORD;
+
+  if (!user || !pass) {
+    console.warn('[email-inquilino] GMAIL_USER ou GMAIL_APP_PASSWORD não configurado — e-mail não enviado');
+    return;
+  }
+
+  const primeiroNome = nomeInquilino.trim().split(/\s+/)[0] ?? 'Cliente';
+
+  const dataHoraFormatada = geradoEm.toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+    timeZone: 'America/Sao_Paulo',
+  });
+
+  const html = buildCupomInquilinoHtml(
+    primeiroNome,
+    parceiro.nome_empresa,
+    parceiro.desconto_descricao,
+    parceiro.codigo_cupom,
+    parceiro.endereco,
+    numeroProtocolo,
+    dataHoraFormatada,
+  );
+
+  try {
+    await getTransporter().sendMail({
+      from:    FROM_LABEL,
+      to:      emailInquilino,
+      subject: `🎟️ Seu cupom ${parceiro.nome_empresa} — Protocolo #${numeroProtocolo}`,
+      html,
+    });
+    console.log(`[email-inquilino] Cupom enviado para ${emailInquilino}`);
+  } catch (err) {
+    console.error('[email-inquilino] Falha ao enviar:', (err as Error).message);
   }
 }

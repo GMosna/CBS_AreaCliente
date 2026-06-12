@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { PartnerCard } from '@/components/portal/PartnerCard';
 import { NovidadesCarousel } from '@/components/portal/NovidadesCarousel';
 import { BeneficiosCard } from '@/components/portal/BeneficiosCard';
+import { ResgatadosCard } from '@/components/portal/ResgatadosCard';
 import { contarBeneficiosDisponiveis } from '@/lib/dashboard';
 import { getParceirosAtivos } from '@/lib/parceiros-cache';
 
@@ -21,7 +22,7 @@ export default async function DashboardPage() {
   const supabase = getSupabase();
 
   // parceiros vêm do cache (60s) — sem hit ao banco na maioria dos requests
-  const [inquilinoRes, parceiros, beneficiosDisponiveis] = await Promise.all([
+  const [inquilinoRes, parceiros, beneficiosDisponiveis, { count: totalResgatado }] = await Promise.all([
     supabase
       .from('inquilinos')
       .select('nome, imovel_referencia')
@@ -29,6 +30,10 @@ export default async function DashboardPage() {
       .single(),
     getParceirosAtivos(),
     contarBeneficiosDisponiveis(inquilinoId),
+    supabase
+      .from('uso_descontos')
+      .select('*', { count: 'exact', head: true })
+      .eq('inquilino_id', inquilinoId),
   ]);
 
   const inquilino = inquilinoRes.data;
@@ -36,9 +41,14 @@ export default async function DashboardPage() {
   const totalParceiros = parceiros.length;
   const segmentos      = new Set(parceiros.map((p) => p.segmento).filter(Boolean)).size;
   const destaques      = parceiros.filter((p) => p.destaque).slice(0, 4);
-  const novidades      = [...parceiros]
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .slice(0, 8);
+
+  // Novidades = parceiros adicionados no mês calendário atual
+  const inicioMes = new Date();
+  inicioMes.setDate(1);
+  inicioMes.setHours(0, 0, 0, 0);
+  const novidades = parceiros
+    .filter((p) => new Date(p.created_at) >= inicioMes)
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   const metricas = [
     { valor: totalParceiros, desc: 'empresas ativas', label: 'Parceiros' },
@@ -74,7 +84,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Métricas */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {metricas.map((m) => (
           <div key={m.label} className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5">
             <p className="text-[var(--color-text-muted)] text-xs uppercase tracking-widest mb-2">{m.desc}</p>
@@ -83,8 +93,11 @@ export default async function DashboardPage() {
           </div>
         ))}
 
-        {/* Card especial — Benefícios Disponíveis (reativo via CustomEvent) */}
+        {/* Benefícios Disponíveis — reativo via CustomEvent (decrementa) */}
         <BeneficiosCard inicial={beneficiosDisponiveis} />
+
+        {/* Quantidade Resgatada — reativo via CustomEvent (incrementa) */}
+        <ResgatadosCard inicial={totalResgatado ?? 0} />
       </div>
 
       {/* Destaques */}
@@ -99,15 +112,13 @@ export default async function DashboardPage() {
         </section>
       )}
 
-      {/* Novidades — carrossel automático */}
-      {novidades.length > 0 && (
-        <section>
-          <h2 className="font-display text-2xl tracking-wider text-[var(--color-text)] mb-4">
-            NOVIDADES
-          </h2>
-          <NovidadesCarousel parceiros={novidades} />
-        </section>
-      )}
+      {/* Novidades — empresas aprovadas no mês atual */}
+      <section>
+        <h2 className="font-display text-2xl tracking-wider text-[var(--color-text)] mb-4">
+          NOVIDADES
+        </h2>
+        <NovidadesCarousel parceiros={novidades} />
+      </section>
 
       {/* CTA */}
       {totalParceiros > 0 && (

@@ -8,7 +8,13 @@ interface NovidadesCarouselProps {
 }
 
 export function NovidadesCarousel({ parceiros }: NovidadesCarouselProps) {
-  if (parceiros.length === 0) return null;
+  if (parceiros.length === 0) {
+    return (
+      <p className="text-[var(--color-text-muted)] text-sm text-center py-8">
+        Nenhuma novidade este mês ainda. Fique atento! 🔔
+      </p>
+    );
+  }
 
   const itens = [...parceiros, ...parceiros];
 

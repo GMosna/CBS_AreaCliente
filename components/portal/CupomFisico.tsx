@@ -1,6 +1,7 @@
 'use client';
 
 import type { ParceiroListItem } from '@/types/parceiro';
+import { formatarFrequencia } from '@/utils/format';
 
 interface CupomFisicoProps {
   parceiro: ParceiroListItem;
@@ -104,7 +105,7 @@ export function CupomFisico({ parceiro }: CupomFisicoProps) {
             Válido para: <strong>Inquilinos Sassi Imóveis</strong>
           </p>
           <p style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px', margin: '4px 0 0' }}>
-            {parceiro.frequencia_desconto ?? 'Consultar parceiro'}
+            {formatarFrequencia(parceiro.frequencia_desconto)}
           </p>
         </div>
 

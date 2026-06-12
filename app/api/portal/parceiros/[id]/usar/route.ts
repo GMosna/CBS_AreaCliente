@@ -40,7 +40,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
   const config = parseFrequencia(parceiro.frequencia_desconto);
 
-  // 2. Verificar disponibilidade (buscar usos existentes)
+  // 2. Verificar disponibilidade
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - 370);
 
@@ -64,41 +64,74 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     );
   }
 
-  // 3. Registrar uso
+  // 3. Registrar uso (retorna o id para vincular ao protocolo)
   const dataResgate = new Date();
-  await supabase.from('uso_descontos').insert({
-    inquilino_id: inquilinoId,
-    parceiro_id: parceiroId,
-    usado_em: dataResgate.toISOString(),
-  });
+  const { data: uso } = await supabase
+    .from('uso_descontos')
+    .insert({
+      inquilino_id: inquilinoId,
+      parceiro_id: parceiroId,
+      usado_em: dataResgate.toISOString(),
+    })
+    .select('id')
+    .single();
 
-  // 4. Audit log
+  // 4. Gerar protocolo sequencial por parceiro
+  let protocoloFormatado = '0001';
+  let protocoloId: string | null = null;
+
+  if (uso?.id) {
+    const { data: numeroData } = await supabase
+      .rpc('proximo_protocolo', { p_parceiro_id: parceiroId });
+
+    const numero = (numeroData as number) ?? 1;
+    protocoloFormatado = String(numero).padStart(4, '0');
+
+    const { data: protRec } = await supabase
+      .from('protocolos_cupom')
+      .insert({
+        uso_id: uso.id,
+        parceiro_id: parceiroId,
+        inquilino_id: inquilinoId,
+        numero_protocolo: numero,
+      })
+      .select('id')
+      .single();
+
+    protocoloId = protRec?.id ?? null;
+  }
+
+  // 5. Audit log
   const acao: AuditAcao =
     parceiro.tipo_loja === 'online' ? 'copiou_codigo_online' : 'visualizou_cupom_fisico';
   await logAudit(acao, request, inquilinoId, { parceiro_id: parceiroId });
 
-  // 5. Notificar representante por e-mail (apenas loja física ou ambos)
-  //    Fire-and-forget: não bloqueia a resposta ao inquilino
-  if (parceiro.tipo_loja === 'fisica' || parceiro.tipo_loja === 'ambos') {
-    const { data: inquilino } = await supabase
-      .from('inquilinos')
-      .select('nome')
-      .eq('id', inquilinoId)
-      .single();
+  // 6. Buscar dados do inquilino (email para exibir no frontend + nome para email representante)
+  const { data: inquilino } = await supabase
+    .from('inquilinos')
+    .select('nome, email')
+    .eq('id', inquilinoId)
+    .single();
 
-    if (inquilino?.nome) {
-      enviarEmailCupomResgatado({
-        parceiro,
-        nomeInquilino: inquilino.nome,
-        dataResgate,
-      }).catch((err: unknown) =>
-        console.error('[email-cupom] Falha ao enviar:', (err as Error).message)
-      );
-    }
+  // 7. Notificar representante por e-mail (loja física ou ambos) — fire-and-forget
+  if ((parceiro.tipo_loja === 'fisica' || parceiro.tipo_loja === 'ambos') && inquilino?.nome) {
+    enviarEmailCupomResgatado({
+      parceiro,
+      nomeInquilino: inquilino.nome,
+      dataResgate,
+      numeroProtocolo: protocoloFormatado,
+    }).catch((err: unknown) =>
+      console.error('[email-cupom] Falha ao enviar:', (err as Error).message)
+    );
   }
 
   return NextResponse.json(
-    { sucesso: true },
+    {
+      sucesso: true,
+      protocolo: protocoloFormatado,
+      protocoloId,
+      inquilinoEmail: inquilino?.email ?? null,
+    },
     { headers: { 'Cache-Control': 'no-store' } }
   );
 }
