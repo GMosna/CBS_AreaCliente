@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
-import { revalidateTag } from 'next/cache';
+import { revalidateTag, revalidatePath } from 'next/cache';
 import { criarNotificacaoGlobal } from '@/lib/notificacoes';
 
 function esc(s: string): string {
@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
 
   const { data: parceiro, error } = await supabase
     .from('parceiros')
-    .update({ aprovado: true })
+    .update({ aprovado: true, ativo: true })
     .eq('cnpj', cnpj)
     .select('id, nome_empresa, aprovado, segmento, desconto_descricao')
     .maybeSingle();
@@ -121,8 +121,10 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Invalidar cache de parceiros para que o novo parceiro apareça imediatamente
+  // Invalidar cache para que o parceiro apareça imediatamente em todas as rotas
   revalidateTag('parceiros');
+  revalidatePath('/portal/parceiros');
+  revalidatePath('/portal/dashboard');
 
   // Notificar inquilinos (fire and forget — nunca bloqueia a resposta)
   criarNotificacaoGlobal({
