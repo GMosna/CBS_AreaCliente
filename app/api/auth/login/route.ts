@@ -4,7 +4,7 @@
 // Fluxo:
 //  1. Valida CPF + data de nascimento no Supabase
 //  2. Verifica: inquilino ativo (ativo = true)
-//  3. Emite access_token (JWT 15min) + refresh_token (7 dias)
+//  3. Emite access_token (JWT 2h) + refresh_token (30 dias)
 //
 // ⚠️  Nunca conecta ao ERP/MySQL diretamente.
 //     Os dados já estão sincronizados no Supabase via N8N.
@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
   const accessToken      = await generateAccessToken({ id: inquilino.id, role: 'inquilino' });
   const refreshToken     = generateRefreshToken();
   const refreshTokenHash = hashToken(refreshToken);
-  const expiresAt        = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const expiresAt        = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
   const { error: tokenErr } = await supabase.from('refresh_tokens').insert({
     inquilino_id: inquilino.id,

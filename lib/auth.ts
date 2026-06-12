@@ -52,7 +52,7 @@ export function compareCPF(cpfRaw: string, storedHash: string): boolean {
 }
 
 // ============================================================
-// ACCESS TOKEN — JWT de curta duração (15 minutos)
+// ACCESS TOKEN — JWT de curta duração (2 horas)
 // ============================================================
 
 /** Codifica a chave JWT_SECRET em bytes para o jose */
@@ -68,12 +68,12 @@ export async function generateAccessToken(payload: TokenPayload): Promise<string
   return new SignJWT({ id: payload.id, role: payload.role })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()                   // iat = agora
-    .setExpirationTime('15m')        // exp = agora + 15 minutos
+    .setExpirationTime('2h')          // exp = agora + 2 horas
     .sign(getJwtSecret());
 }
 
 // ============================================================
-// REFRESH TOKEN — Token opaco de longa duração (7 dias)
+// REFRESH TOKEN — Token opaco de longa duração (30 dias)
 //
 // Estratégia:
 //   - Geramos um token aleatório (128 chars hex = 64 bytes)
@@ -110,7 +110,7 @@ export function setAuthCookies(
   accessToken: string,
   refreshToken: string
 ): void {
-  // Access token: válido por 15 minutos.
+  // Access token: válido por 2 horas.
   // path='/' permite que o browser o envie tanto para /portal/* quanto para
   // /api/portal/*. A proteção CSRF é garantida pelo sameSite:'strict' e httpOnly.
   response.cookies.set('access_token', accessToken, {
@@ -118,16 +118,16 @@ export function setAuthCookies(
     secure: IS_PROD,                  // HTTPS apenas em produção
     sameSite: 'strict',               // nunca enviado em requisições cross-site
     path: '/',                        // necessário para /api/portal/* também funcionar
-    maxAge: 900,                      // 15 minutos em segundos
+    maxAge: 60 * 60 * 2,             // 2 horas em segundos
   });
 
-  // Refresh token: válido por 7 dias, só em /api/auth/refresh
+  // Refresh token: válido por 30 dias, só em /api/auth/refresh
   response.cookies.set('refresh_token', refreshToken, {
     httpOnly: true,
     secure: IS_PROD,
     sameSite: 'strict',
     path: '/api/auth/refresh',        // só enviado para esta rota específica
-    maxAge: 60 * 60 * 24 * 7,        // 7 dias em segundos
+    maxAge: 60 * 60 * 24 * 30,       // 30 dias em segundos
   });
 }
 
